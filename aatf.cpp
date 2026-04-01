@@ -50,10 +50,10 @@ int goldGiantPen = 0;
 int goldRate = 99; //Player skill ratings
 int silverRate = 88;
 int regRate = 77;
-int gkRate = 77;
+int gkRate = 74;
 
 int reqNumGold = 2; //Numbers of medals
-int reqNumSilver = 2;
+int reqNumSilver = 3;
 
 int goldForm = 8; //possible range 1-8
 int silverForm = 8;
