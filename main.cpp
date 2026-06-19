@@ -88,7 +88,7 @@ HINSTANCE ghinst;			//Main window instance
 HINSTANCE hPesDecryptDLL;	//Handle to libpesXcrypter.dll 
 HINSTANCE hPes15DecryptDLL;	//Handle to libpes15crypter.dll 
 HWND ghw_main;				//Handle to main window
-HWND ghw_tabcon, ghw_tab1, ghw_tab2, ghw_tab3;
+HWND ghw_tabcon, ghw_tab1, ghw_tab2, ghw_tab3, ghw_tab4;
 HFONT ghFont;
 HWND ghw_stat=NULL, ghw_bump=NULL, ghw_copy=NULL, ghw_import=NULL, ghw_swap = NULL, ghw_boglo=NULL;
 HWND ghw_DlgCurrent = NULL;
@@ -260,6 +260,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			setup_tab1(H);
 			setup_tab2(H);
 			setup_tab3(H);
+			setup_tab4(H);
 
 			int x1, x2, y1;
 			x1 = GetSystemMetrics(SM_CXSCREEN);
@@ -416,6 +417,10 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					{
 						ShowWindow(ghw_tab3, SW_HIDE);
 					}
+					else if ( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 3 )
+					{
+						ShowWindow(ghw_tab4, SW_HIDE);
+					}
 				}
 				break;
 
@@ -434,6 +439,10 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					else if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 2 )
 					{
 						ShowWindow(ghw_tab3, SW_SHOW);
+					}
+					else if ( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 3 )
+					{
+						ShowWindow(ghw_tab4, SW_SHOW);
 					}
 				}
 				break;
@@ -3996,6 +4005,121 @@ LRESULT CALLBACK tab_three_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 		break;
     }
     return DefSubclassProc(H, M, W, L);
+}
+
+LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			resize_info* pri = (resize_info*)L;
+			int X, Y, cx, cy, offset = 0;
+
+			X = ceil(pri->scale * winrect.left);
+			Y = ceil(pri->scale * winrect.top);
+			cx = ceil(pri->scale * (winrect.right - winrect.left));
+			cy = ceil(pri->scale * (winrect.bottom - winrect.top));
+			if (GetParent(H) == ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_TOP, X - offset, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+		}
+		break;
+
+		/*case WM_CTLCOLORBTN:
+		{
+			if (gplayers)
+			{
+				int red, green, blue;
+				wchar_t buffer[5];
+				if ((HWND)L == GetDlgItem(H, IDB_TCOLOR1))
+				{
+					DeleteObject(gTeamColor1);
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_GETTEXT, 4, (LPARAM)buffer);
+					red = floor(4.05 * _wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_GETTEXT, 4, (LPARAM)buffer);
+					green = floor(4.05 * _wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_GETTEXT, 4, (LPARAM)buffer);
+					blue = floor(4.05 * _wtoi(buffer));
+					gTeamColor1 = CreateSolidBrush(RGB(red, green, blue));
+					return (INT_PTR)gTeamColor1;
+				}
+				else if ((HWND)L == GetDlgItem(H, IDB_TCOLOR2))
+				{
+					DeleteObject(gTeamColor2);
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_GETTEXT, 4, (LPARAM)buffer);
+					red = floor(4.05 * _wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_GETTEXT, 4, (LPARAM)buffer);
+					green = floor(4.05 * _wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_GETTEXT, 4, (LPARAM)buffer);
+					blue = floor(4.05 * _wtoi(buffer));
+					gTeamColor2 = CreateSolidBrush(RGB(red, green, blue));
+					return (INT_PTR)gTeamColor2;
+				}
+			}
+		}
+		break;*/
+
+		case WM_COMMAND:
+		{
+			switch (HIWORD(W))
+			{
+				/*case EN_CHANGE:
+				{
+					int test = 0;
+					switch (LOWORD(W))
+					{
+						case IDT_TCOL_R1:
+						case IDT_TCOL_G1:
+						case IDT_TCOL_B1:
+						{
+							InvalidateRect(GetDlgItem(H, IDB_TCOLOR1), NULL, TRUE);
+						}
+						break;
+
+						case IDT_TCOL_R2:
+						case IDT_TCOL_G2:
+						case IDT_TCOL_B2:
+						{
+							InvalidateRect(GetDlgItem(H, IDB_TCOLOR2), NULL, TRUE);
+						}
+					break;
+					}
+				}
+				break;*/
+
+				case BN_CLICKED:
+				{
+					switch (LOWORD(W))
+					{
+						case IDB_TCOLOR1:
+						{
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
 }
 
 

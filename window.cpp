@@ -272,6 +272,8 @@ void setup_main(HWND H)
 	TabCtrl_InsertItem(ghw_tabcon,1,&ti);
 	ti.pszText = _T("Team"); //Tab three title
 	TabCtrl_InsertItem(ghw_tabcon,2,&ti);
+	ti.pszText = _T("Tactics"); //Tab three title
+	TabCtrl_InsertItem(ghw_tabcon,3,&ti);
 
 	TabCtrl_SetCurSel(ghw_tabcon,0); //tab 1 visible by default
 }
@@ -2110,4 +2112,131 @@ void setup_tab3(HWND H)
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE, 
 		x1, y2+2+ydiff, 80, 17, ghw_tab3, (HMENU)IDC_STATIC_T96, GetModuleHandle(NULL), NULL);	
 	setup_control(hw_new, ghFont, scale_static_proc);
+}
+
+void setup_tab4(HWND H)
+{
+	RECT* chd_rect;
+	HWND hw_new, hw_bud;
+
+	//##############################
+	// Tactics tab
+	ghw_tab4 = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_TAB_FOUR), ghw_tabcon, 0);
+	ShowWindow(ghw_tab4, SW_HIDE);
+	chd_rect = new RECT;
+	GetWindowRect(ghw_tabcon, chd_rect);
+	MapWindowPoints(HWND_DESKTOP, ghw_tabcon, (LPPOINT)chd_rect, 2);
+	TabCtrl_AdjustRect(ghw_tabcon, false, chd_rect);
+	SetWindowPos(ghw_tab4, HWND_TOP, chd_rect->left, chd_rect->top,
+		chd_rect->right - chd_rect->left, chd_rect->bottom - chd_rect->top,
+		SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+	SetWindowSubclass(ghw_tab4, tab_four_dlg_proc, 0, (DWORD_PTR)chd_rect);
+
+
+	//Preset
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Preset"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		10, 5, 197, 100, ghw_tab4, (HMENU)IDC_STATIC_F1, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(0, _T("Static"), _T("Change Preset:"), 
+		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE, 
+		20, 26, 85, 17, ghw_tab4, (HMENU)IDC_STATIC_F7, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
+		CBS_DROPDOWNLIST | WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_TABSTOP,
+		110, 22, 86, 100, ghw_tab4, (HMENU)IDC_TACT_PRES, GetModuleHandle(NULL), NULL);
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Preset 1"));
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Preset 2"));
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Preset 3"));
+	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
+	setup_combo(hw_new, ghFont, cb2_cntl_proc);
+
+	hw_new = CreateWindowEx(0, _T("Static"), _T("Change Formation:"),
+		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
+		20, 50, 120, 17, ghw_tab4, (HMENU)IDC_STATIC_F8, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
+		CBS_DROPDOWNLIST | WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_TABSTOP,
+		20, 70, 176, 100, ghw_tab4, (HMENU)IDC_TACT_FORM, GetModuleHandle(NULL), NULL);
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Kick-off"));
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("In-possession"));
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Out-of-possession"));
+	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
+	setup_combo(hw_new, ghFont, cb2_cntl_proc);
+
+
+	/*if (csel == -1 || gplayers[ii].id == gteams[gn_teamCbIndToArray[csel]].players[jj])
+	{
+		SendDlgItemMessage(hwnd, dropdown1, CB_ADDSTRING, 0, (LPARAM)gplayers[ii].name);
+		SendDlgItemMessage(hwnd, dropdown1, CB_SETITEMDATA, kk, (unsigned long)gplayers[ii].id);
+		SendDlgItemMessage(hwnd, dropdown2, CB_ADDSTRING, 0, (LPARAM)gplayers[ii].name);
+		SendDlgItemMessage(hwnd, dropdown2, CB_SETITEMDATA, kk, (unsigned long)gplayers[ii].id);
+		if (gplayers[ii].id == playerId)
+			selectedPlayerIndex = kk;
+		kk++;
+		break;
+	}*/
+
+	//Player Controls
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Player Controls"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		10, 110, 197, 310, ghw_tab4, (HMENU)IDC_STATIC_F2, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	//hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
+	//	CBS_DROPDOWNLIST | WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_TABSTOP,
+	//	20, 70, 176, 100, ghw_tab4, (HMENU)IDC_TACT_PRES, GetModuleHandle(NULL), NULL);
+	//SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Kick-off"));
+	//SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("In-possession"));
+	//SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Out-of-possession"));
+	//SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
+	//setup_combo(hw_new, ghFont, cb2_cntl_proc);
+
+
+	//Formation
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Formation"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		217, 5, 270, 415, ghw_tab4, (HMENU)IDC_STATIC_F3, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+
+	//Lineup
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Lineup"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		497, 5, 183, 415, ghw_tab4, (HMENU)IDC_STATIC_F4, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+
+	//Player Assignments
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Player Assignments"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		10, 423, 320, 160, ghw_tab4, (HMENU)IDC_STATIC_F5, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+
+	//Formation Settings
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Formation Settings"),
+		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		340, 423, 340, 160, ghw_tab4, (HMENU)IDC_STATIC_F6, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Fluid"),
+		BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
+		350, 440, 133, 17, ghw_tab4, (HMENU)IDB_TACT_FLUID, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	////Red 1
+	//hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
+	//	ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
+	//	x2, y1 + ydiff * 0, 44, 18, ghw_tab4, (HMENU)IDT_TCOL_R1, GetModuleHandle(NULL), NULL);
+	//hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""),
+	//	UDS_AUTOBUDDY | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE,
+	//	0, 0, 0, 0, ghw_tab4, (HMENU)IDC_TCOL_R1, GetModuleHandle(NULL), NULL);
+	//setup_control(hw_new, ghFont, scale_cntl_proc);
+	//setup_control(hw_bud, ghFont, scale_cntl_proc);
+	//SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	//SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(63, 0));
 }
