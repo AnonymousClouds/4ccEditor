@@ -552,6 +552,124 @@ struct stripSet
 	unsigned long stripTeamId; //3 bytes, Team ID * 0x40
 };
 
+//Position byte map:
+//0x00 - GK
+//0x01 - CB
+//0x02 - LB
+//0x03 - RB
+//0x04 - DMF
+//0x05 - CMF
+//0x06 - LMF
+//0x07 - RMF
+//0x08 - AMF
+//0x09 - LWF
+//0x0A - RWF
+//0xOB - SS
+//0xOC - CF
+
+//X byte range: 0x00-0x68
+//Y byte range: 0x00-0x30
+struct player_formation_data
+{
+	byte x, y, pos;
+};
+
+struct formation_entry
+{
+	player_formation_data players[11];
+
+	//Constructor
+	formation_entry()
+	{
+		for (int ii = 0; ii < 11; ii++)
+		{
+			players[ii].x = 0x00;
+			players[ii].y = 0x00;
+			players[ii].pos = 0x00;
+		}
+	}
+
+	bool operator==(const formation_entry& rhs)
+	{
+		bool b_out = true;
+
+		for (int ii = 0; ii < 11; ii++)
+		{
+			b_out = b_out && this->players[ii].x == rhs.players[ii].x;
+			b_out = b_out && this->players[ii].y == rhs.players[ii].y;
+			b_out = b_out && this->players[ii].pos == rhs.players[ii].pos;
+		}
+
+		return b_out;
+	}
+};
+
+struct preset_entry
+{
+	bool attacking_style; //0 = Counter Attack, 1 = Possession
+	bool attacking_zone; //0 = Center, 1 = Wide
+	bool buildup; //0 = Long Pass, 1 = Short Pass
+	bool positioning; //0 = Maintain, 1 = Flex
+	bool defensive_style; //0 = Frontline Pressure, 1 = All-out Defense
+	bool containment_area; //0 = Middle, 1 = Wide
+	bool pressure; //0 = Aggressive, 1 = Conservative 
+	bool fluid;
+
+	byte support_range; //Valid values: 0x01 - 0x0A
+	byte defensive_line; //Valid values: 0x01 - 0x0A
+	byte compactness; //Valid values: 0x01 - 0x0A
+	byte numbers_in_attack; //1 = Few, 2 = Medium, 3 = Many
+	byte numbers_in_defense; //1 = Few, 2 = Medium, 3 = Many
+
+	formation_entry formations[3];
+
+	//Constructor
+	preset_entry()
+	{
+		attacking_style = 0;
+		attacking_zone = 0;
+		buildup = 0;
+		positioning = 0;
+		defensive_style = 0;
+		containment_area = 0;
+		pressure = 0;
+		fluid = 0;
+		support_range = 0;
+		defensive_line = 0;
+		compactness = 0;
+		numbers_in_attack = 0;
+		numbers_in_defense = 0;
+
+		for (int ii = 0; ii < 3; ii++)
+		{
+			formations[ii] = formation_entry();
+		}
+	}
+
+	bool operator==(const preset_entry& rhs)
+	{
+		bool b_out = this->attacking_style == rhs.attacking_style;
+
+		b_out = b_out && this->attacking_zone == rhs.attacking_zone;
+		b_out = b_out && this->buildup == rhs.buildup;
+		b_out = b_out && this->positioning == rhs.positioning;
+		b_out = b_out && this->defensive_style == rhs.defensive_style;
+		b_out = b_out && this->containment_area == rhs.containment_area;
+		b_out = b_out && this->pressure == rhs.pressure;
+		b_out = b_out && this->fluid == rhs.fluid;
+		b_out = b_out && this->support_range == rhs.support_range;
+		b_out = b_out && this->defensive_line == rhs.defensive_line;
+		b_out = b_out && this->compactness == rhs.compactness;
+		b_out = b_out && this->numbers_in_attack == rhs.numbers_in_attack;
+		b_out = b_out && this->numbers_in_defense == rhs.numbers_in_defense;
+
+		for (int ii = 0; ii < 3; ii++)
+			b_out = b_out && this->formations[ii] == rhs.formations[ii];
+
+		return b_out;
+	}
+};
+
 struct team_entry
 {
 	static const int team_max = 40; //Number of player entries per team
@@ -571,7 +689,20 @@ struct team_entry
 	int num_on_team;
 
 	int starting11[11];
+	int bench_order[21];
+
+	//Tactical stuff
+	byte fk_taker_long;
+	byte fk_taker_short;
+	byte fk_taker_2;
+	byte ck_taker_left;
+	byte ck_taker_right;
+	byte pk_taker;
+	byte players_to_join_attack[3];
 	char captain_ind;
+	byte auto_substitution;
+	bool auto_offside_trap;
+	bool auto_preset_change;
 
 	char color1_red;
 	char color1_blue;
@@ -579,6 +710,8 @@ struct team_entry
 	char color2_red;
 	char color2_blue;
 	char color2_green;
+
+	preset_entry presets[3];
 
 	//Team strip block
 	stripSet stripBlock[10];
@@ -619,6 +752,24 @@ struct team_entry
 
 		manager_id = 0;
 		stadium_id = 0;
+
+		fk_taker_long = 0;
+		fk_taker_short = 0;
+		fk_taker_2 = 0;
+		ck_taker_left = 0;
+		ck_taker_right = 0;
+		pk_taker = 0;
+		auto_substitution = 0;
+		auto_offside_trap = 0;
+		auto_preset_change = 0;
+		for (int ii = 0; ii < 3; ii++)
+		{
+			presets[ii] = preset_entry();
+		}
+		for (int ii = 0; ii < 3; ii++)
+		{
+			players_to_join_attack[ii] = 0xFF;
+		}
 	}
 
 	bool operator==(const team_entry& rhs)
@@ -641,6 +792,18 @@ struct team_entry
 		b_out = b_out && this->color2_red==rhs.color2_red;
 		b_out = b_out && this->color2_blue==rhs.color2_blue;
 		b_out = b_out && this->color2_green==rhs.color2_green;
+
+		b_out = b_out && this->fk_taker_long == rhs.fk_taker_long;
+		b_out = b_out && this->fk_taker_short == rhs.fk_taker_short;
+		b_out = b_out && this->fk_taker_2 == rhs.fk_taker_2;
+		b_out = b_out && this->ck_taker_left == rhs.ck_taker_left;
+		b_out = b_out && this->ck_taker_right == rhs.ck_taker_right;
+		b_out = b_out && this->pk_taker == rhs.pk_taker;
+		b_out = b_out && this->auto_substitution == rhs.auto_substitution;
+		b_out = b_out && this->auto_offside_trap == rhs.auto_offside_trap;
+		b_out = b_out && this->auto_preset_change == rhs.auto_preset_change;
+
+		for (ii = 0; ii < 3; ii++) b_out = b_out && (this->presets[ii] == rhs.presets[ii]);
 
 		return b_out;
 	}
