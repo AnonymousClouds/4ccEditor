@@ -2538,13 +2538,18 @@ void setup_tab4(HWND H)
 		x, y, 183, 370, ghw_tab4, (HMENU)IDC_STATIC_F4, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
+	hw_new = CreateWindowEx(0, _T("Static"), _T(""),
+		SS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
+		x+5, y+15, 173, 350, ghw_tab4, (HMENU)IDB_TACT_BG2, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
 	hw_new = CreateWindowEx(0, _T("Button"), _T("GK"),
 		BS_PUSHBUTTON | BS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
 		x+10, y+20, 51, 17, ghw_tab4, (HMENU)IDB_TACT_BN1, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 1"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+21, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN1, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2554,7 +2559,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 2"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+41, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN2, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2564,7 +2569,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 3"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+61, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN3, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2574,7 +2579,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 4"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+81, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN4, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2584,7 +2589,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 5"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+101, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN5, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2594,7 +2599,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 6"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+121, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN6, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2604,7 +2609,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 7"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+141, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN7, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2614,7 +2619,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 8"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+161, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN8, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2624,7 +2629,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 9"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+181, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN9, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2634,7 +2639,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 10"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+201, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN10, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
@@ -2644,7 +2649,7 @@ void setup_tab4(HWND H)
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 11"),
-		SS_NOTIFY | SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
 		x+67, y+221, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN11, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
