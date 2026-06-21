@@ -115,8 +115,9 @@ int g_prevx=0;
 int giPesVersion = 0;
 int g_bumpAmount = 0;
 const uint8_t* gpMasterKey;
-int gi_preset, gi_formation, gi_selected_player1, gi_selected_player2;
+int gi_preset, gi_formation, gi_selected_player_field, gi_selected_player_bench;
 bool gb_tactics_enabled = false;
+bool gb_updating_tactics = false; //To prevent the EN_CHANGE doing things when its triggered programattically
 
 appearance_map g_umap_pid_to_startByte; //Map from player ID to start byte of appearance entry
 
@@ -348,6 +349,11 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				EnumChildWindows(H, draw_children, (LPARAM)0); 
 
 				InvalidateRect(H,NULL,true);
+
+				if (giPesVersion == 16 && gi_preset != -1 && gi_formation != -1)
+				{
+					populate_tactics_tab((gteams[gn_teamsel].id * 100) + 1, gi_preset, gi_formation);
+				}
 			}
 		}
 		break;
@@ -4028,6 +4034,12 @@ LRESULT CALLBACK tab_three_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
+	int teamOffset = -1;
+	if (gteams && gn_teamsel && gn_teamsel != -1)
+	{
+		teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	}
+
 	switch (M)
 	{
 		case UM_SCALE:
@@ -4179,41 +4191,588 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 		{
 			switch (HIWORD(W))
 			{
-				/*case EN_CHANGE:
+				case CBN_SELCHANGE:
 				{
-					int test = 0;
 					switch (LOWORD(W))
 					{
-						case IDT_TCOL_R1:
-						case IDT_TCOL_G1:
-						case IDT_TCOL_B1:
+						case IDC_TACT_PRESET:
 						{
-							InvalidateRect(GetDlgItem(H, IDB_TCOLOR1), NULL, TRUE);
+							if (giPesVersion == 16)
+							{
+								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_GETCURSEL, 0, 0);
+								//Reset formation to kick-off
+								SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+								populate_tactics_tab(teamOffset, sel, 0);
+							}
 						}
 						break;
 
-						case IDT_TCOL_R2:
-						case IDT_TCOL_G2:
-						case IDT_TCOL_B2:
+						case IDC_TACT_FORM:
 						{
-							InvalidateRect(GetDlgItem(H, IDB_TCOLOR2), NULL, TRUE);
+							if (giPesVersion == 16)
+							{
+								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_GETCURSEL, 0, 0);
+								//Only repopulate if fluid
+								if (gteams[gn_teamsel].presets[gi_preset].fluid)
+								{
+									for (int ii = 0; ii < 11; ii++)
+									{
+										player_formation_data player = gteams[gn_teamsel].presets[gi_preset].formations[sel].players[ii];
+										set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
+									}
+									RECT rectFormation = create_rect(217, 5, 270, 370);
+									RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+								}
+							}
 						}
-					break;
+						break;
+
+						case IDC_TACT_PLPOS:
+						{
+							if (giPesVersion == 16 && !gb_updating_tactics)
+							{
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, pos_ind, 0);
+								int current_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
+								int current_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos = pos;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, pos, current_x, current_y);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_ASTY:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].attacking_style = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_BLD:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].buildup = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AZON:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].attacking_zone = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_SLDPOS:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].positioning = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_ANUM:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].numbers_in_attack = val + 1;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_DSTY:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_DSTY, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].defensive_style = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_CAREA:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].containment_area = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_PRES:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].pressure = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_DNUM:
+						{
+							if (giPesVersion == 16)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].numbers_in_defense = val + 1;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_FKLG:
+						case IDC_TACT_FKSH:
+						case IDC_TACT_FK2:
+						case IDC_TACT_CKL:
+						case IDC_TACT_CKR:
+						case IDC_TACT_PK:
+						case IDC_TACT_PTJ1:
+						case IDC_TACT_PTJ2:
+						case IDC_TACT_PTJ3:
+						{
+							if (giPesVersion == 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, LOWORD(W), CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, LOWORD(W), CB_GETITEMDATA, index, 0);
+
+								if (LOWORD(W) == IDC_TACT_FKLG)
+									gteams[gn_teamsel].fk_taker_long = val;
+								else if (LOWORD(W) == IDC_TACT_FKSH)
+									gteams[gn_teamsel].fk_taker_short = val;
+								else if (LOWORD(W) == IDC_TACT_FK2)
+									gteams[gn_teamsel].fk_taker_2 = val;
+								else if (LOWORD(W) == IDC_TACT_CKL)
+									gteams[gn_teamsel].ck_taker_left = val;
+								else if (LOWORD(W) == IDC_TACT_CKR)
+									gteams[gn_teamsel].ck_taker_right = val;
+								else if (LOWORD(W) == IDC_TACT_PK)
+									gteams[gn_teamsel].pk_taker = val;
+								else if (LOWORD(W) == IDC_TACT_PTJ1)
+								{
+									gteams[gn_teamsel].players_to_join_attack[0] = val;
+
+									if (val == 0xFF)
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETCURSEL, 11, 0);
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, 11, 0);
+										gteams[gn_teamsel].players_to_join_attack[1] = val;
+										gteams[gn_teamsel].players_to_join_attack[2] = val;
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+									else
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+									}
+								}
+								else if (LOWORD(W) == IDC_TACT_PTJ2)
+								{
+									gteams[gn_teamsel].players_to_join_attack[1] = val;
+
+									if (val == 0xFF)
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, 11, 0);
+										gteams[gn_teamsel].players_to_join_attack[2] = val;
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+									else
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+								}
+								else if (LOWORD(W) == IDC_TACT_PTJ3)
+									gteams[gn_teamsel].players_to_join_attack[2] = val;
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						default:
+							break;
 					}
 				}
-				break;*/
+				break;
+
+				case EN_CHANGE:
+				{
+					switch (LOWORD(W))
+					{
+						case IDT_TACT_PLX:
+						{
+							if (giPesVersion == 16 && gi_selected_player_field != -1 && !gb_updating_tactics)
+							{
+								TCHAR buffer[4];
+								GetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer, 4);
+								int x = _wtoi(buffer);
+								if (x > 0x68)
+								{
+									x = 0x68;
+									swprintf_s(buffer, 4, L"%d", x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer);
+								}
+								else if (x < 0x00)
+								{
+									x = 0x00;
+									swprintf_s(buffer, 4, L"%d", x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer);
+								}
+
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
+
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x = x;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, x, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_PLY:
+						{
+							if (giPesVersion == 16 && gi_selected_player_field != -1 && !gb_updating_tactics)
+							{
+								TCHAR buffer[4];
+								GetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer, 4);
+								int y = _wtoi(buffer);
+								if (y > 0x30)
+								{
+									y = 0x30;
+									swprintf_s(buffer, 4, L"%d", y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer);
+								}
+								else if (y < 0x00)
+								{
+									y = 0x00;
+									swprintf_s(buffer, 4, L"%d", y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer);
+								}
+
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
+
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].y = y;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x, y);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_SRNG:
+						{
+							if (giPesVersion == 16 && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer, 3);
+								int range = _wtoi(buffer);
+								if (range > 10)
+								{
+									range = 10;
+									swprintf_s(buffer, 3, L"%d", range);
+									SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer);
+								}
+								else if (range < 1)
+								{
+									range = 1;
+									swprintf_s(buffer, 3, L"%d", range);
+									SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].support_range = range;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_DLNE:
+						{
+							if (giPesVersion == 16 && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer, 3);
+								int val = _wtoi(buffer);
+								if (val > 10)
+								{
+									val = 10;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer);
+								}
+								else if (val < 1)
+								{
+									val = 1;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].defensive_line = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_CMPT:
+						{
+							if (giPesVersion == 16 && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer, 3);
+								int val = _wtoi(buffer);
+								if (val > 10)
+								{
+									val = 10;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer);
+								}
+								else if (val < 1)
+								{
+									val = 1;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].compactness = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						default:
+							break;
+					}
+				}
+				break;
 
 				case BN_CLICKED:
 				{
 					switch (LOWORD(W))
 					{
-						case IDB_TCOLOR1:
+						case IDB_TACT_PLNXT:
+						case IDB_TACT_PLPRV:
 						{
+							if (giPesVersion == 16)
+							{
+								if (gi_selected_player_field == -1)
+									gi_selected_player_field = 0;
+								else if (LOWORD(W) == IDB_TACT_PLNXT)
+								{
+									if (gi_selected_player_field == 10)
+										gi_selected_player_field = 0;
+									else
+										gi_selected_player_field++;
+								}
+								else
+								{
+									if (gi_selected_player_field == 0)
+										gi_selected_player_field = 10;
+									else
+										gi_selected_player_field--;
+								}
+
+								int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
+								for (int ii = 0; ii < gnum_players; ii++)
+								{
+									if (gplayers[ii].id == player_id)
+									{
+										SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
+
+										wchar_t buff_x[3], buff_y[3];
+										swprintf_s(buff_x, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+										swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+										SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+										SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+
+										if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos != 0x00)
+										{
+											EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+										}
+										else
+										{
+											EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+										}
+										break;
+									}
+								}
+
+								gteams[gn_teamsel].b_changed = true;
+							}
 						}
 						break;
+
+						case IDB_TACT_BTNGK:
+						{
+							if (giPesVersion == 16)
+							{
+								//Find current GK
+								int curr_x, curr_y, curr_pos, current_index;
+								curr_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
+								curr_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+								curr_pos = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos;
+								current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+
+								for (int ii = 0; ii < 11; ii++)
+								{
+									int player_index = gteams[gn_teamsel].starting11[ii];
+									if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos == 0x00)
+									{
+										gteams[gn_teamsel].starting11[gi_selected_player_field] = gteams[gn_teamsel].starting11[ii];
+										gteams[gn_teamsel].starting11[ii] = current_index;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[index].x = curr_x;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[index].y = curr_y;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[index].pos = curr_pos;
+										set_player_xy(ii, player_index + teamOffset, curr_pos, curr_x, curr_y);
+										break;
+									}
+								}
+
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x = 54;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].y = 3;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].pos = 0x00;
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, 0x00, 54, 3);
+								SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+								SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"52");
+								SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"3");
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						//One of the players or their label
+						case IDB_TACT_PL1:
+						case IDB_TACT_PL2:
+						case IDB_TACT_PL3:
+						case IDB_TACT_PL4:
+						case IDB_TACT_PL5:
+						case IDB_TACT_PL6:
+						case IDB_TACT_PL7:
+						case IDB_TACT_PL8:
+						case IDB_TACT_PL9:
+						case IDB_TACT_PL10:
+						case IDB_TACT_PL11:
+						case IDC_STATIC_PL1:
+						case IDC_STATIC_PL2:
+						case IDC_STATIC_PL3:
+						case IDC_STATIC_PL4:
+						case IDC_STATIC_PL5:
+						case IDC_STATIC_PL6:
+						case IDC_STATIC_PL7:
+						case IDC_STATIC_PL8:
+						case IDC_STATIC_PL9:
+						case IDC_STATIC_PL10:
+						case IDC_STATIC_PL11:
+						{
+							gb_updating_tactics = true;
+							if (giPesVersion == 16)
+							{
+								int player_index;
+								if (LOWORD(W) - IDC_STATIC_PL1 < 0)
+									player_index = LOWORD(W) - IDB_TACT_PL1;
+								else 
+									player_index = LOWORD(W) - IDC_STATIC_PL1;
+
+								if (player_index != gi_selected_player_field)
+								{
+									int player_id = teamOffset + gteams[gn_teamsel].starting11[player_index];
+									for (int ii = 0; ii < gnum_players; ii++)
+									{
+										if (gplayers[ii].id == player_id)
+										{
+											SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
+
+											wchar_t buff_x[3], buff_y[3];
+											swprintf_s(buff_x, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].x);
+											swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].y);
+											SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+											SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+
+											if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+											{
+												SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos - 1, 0);
+												EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+												EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), TRUE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+												EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), TRUE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+												EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), TRUE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+											}
+											else
+											{
+												SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+												EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+												EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+												EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), FALSE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+												EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), FALSE);
+												UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+											}
+											break;
+										}
+									}
+
+									if (gi_selected_player_bench != -1)
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+									}
+									gi_selected_player_field = player_index;
+								}
+							}
+							gb_updating_tactics = false;
+						}
+						break;
+						default:
+							break;
 					}
 				}
 				break;
+				default:
+					break;
 			}
 		}
 		break;
@@ -6007,11 +6566,11 @@ void init_tactics_tab()
 
 		gi_preset = -1;
 		gi_formation = -1;
-		gi_selected_player1 = 0;
-		gi_selected_player2 = 0;
+		gi_selected_player_field = -1;
+		gi_selected_player_bench = -1;
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
-		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 		populate_tactics_tab(teamOffset, 0, 0);
 
 		//Player Assignments BEGIN
@@ -6112,9 +6671,19 @@ void init_tactics_tab()
 			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
 			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
 		}
+		else
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+		}
 		if (i_ptj1 == 11)
 		{
 			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+		}
+		else
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), TRUE);
 			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
 		}
 		//Player Assignments END
@@ -6128,6 +6697,7 @@ void init_tactics_tab()
 //Populates the tactics tab's field for the specified preset and formation
 void populate_tactics_tab(int teamOffset, int preset, int formation)
 {
+	gb_updating_tactics = true;
 	if (preset != gi_preset)
 	{
 		Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[preset].fluid);
@@ -6139,27 +6709,29 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
 		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
 		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+		EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
 
-		wchar_t buff_support_range[2], buff_dline[2], buff_compactness[2];
+		wchar_t buff_support_range[3], buff_dline[3], buff_compactness[3];
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_style, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].buildup, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_zone, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].positioning, 0);
-		swprintf_s(buff_support_range, 2, L"%d", gteams[gn_teamsel].presets[preset].support_range);
+		swprintf_s(buff_support_range, 3, L"%d", gteams[gn_teamsel].presets[preset].support_range);
 		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_attack - 1, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].containment_area, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].pressure, 0);
-		swprintf_s(buff_dline, 2, L"%d", gteams[gn_teamsel].presets[preset].defensive_line);
+		swprintf_s(buff_dline, 3, L"%d", gteams[gn_teamsel].presets[preset].defensive_line);
 		SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buff_dline);
-		swprintf_s(buff_compactness, 2, L"%d", gteams[gn_teamsel].presets[preset].compactness);
+		swprintf_s(buff_compactness, 3, L"%d", gteams[gn_teamsel].presets[preset].compactness);
 		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_defense - 1, 0);
 	}
 
 	for (int ii = 0; ii < 11; ii++)
 	{
-		player_formation_data player = gteams[gn_teamsel].presets[0].formations[0].players[ii];
+		player_formation_data player = gteams[gn_teamsel].presets[preset].formations[formation].players[ii];
 		set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
 	}
 	RECT rectFormation = create_rect(217, 5, 270, 370);
@@ -6167,6 +6739,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 
 	gi_preset = preset;
 	gi_formation = formation;
+	gb_updating_tactics = false;
 }
 
 
