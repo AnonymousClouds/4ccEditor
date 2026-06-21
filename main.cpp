@@ -76,12 +76,13 @@ void fix_database();
 void scroll_player_up();
 void scroll_player_down();
 void update_tables();
-void init_tactics_tab();
 void toggle_tactics(bool b_enable);
-void draw_tactics_bg();
+void init_tactics_tab();
+void populate_tactics_tab(int teamOffset, int preset, int formation);
 void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y);
 void update_backline(int teamOffset);
 wchar_t* get_position_name_from_byte(byte pos);
+RECT create_rect(int x, int y, int width, int height);
 
 void SD_OnHVScroll(HWND hwnd, int bar, UINT code);
 void SD_ScrollClient(HWND hwnd, int bar, int pos);
@@ -4083,7 +4084,6 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					case IDB_TACT_BN10:
 					case IDB_TACT_BN11:
 					{
-						HWND hTabCtrl = GetDlgItem(H, IDC_TAB_MAIN);
 						HDC hdc = lpdis->hDC;
 						RECT rc = lpdis->rcItem;
 						COLORREF bkColor;
@@ -4114,6 +4114,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 						DeleteObject(hdc);
 					}
+					break;
 					default:
 						break;
 				}
@@ -4121,17 +4122,55 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			}
 			else if (lpdis->CtlType == ODT_STATIC)
 			{
-				HWND hTabCtrl = GetDlgItem(H, IDC_TAB_MAIN);
-				HDC hdc = lpdis->hDC;
-				RECT rc = lpdis->rcItem;
+				switch (LOWORD(W))
+				{
+					case IDB_TACT_BG:
+					{
+						int width = 260, height = 350;
 
-				TCHAR buffer[256];
-				GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 256);
+						HDC hdc = lpdis->hDC;
+						HBRUSH brush;
+						COLORREF bg1 = RGB(67, 102, 34), bg2 = RGB(77, 116, 44), lineColor = RGB(255, 255, 255);
 
-				SetBkMode(hdc, TRANSPARENT);
-				SetTextColor(hdc, RGB(0, 0, 0));
-				DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-				DeleteObject(hdc);
+						for (int ii = 0; ii < 7; ii++)
+						{
+							RECT rectBg = create_rect(0, (ii * 50), width, 50);
+							brush = CreateSolidBrush(ii % 2 == 1 ? bg1 : bg2);
+							FillRect(hdc, &rectBg, brush);
+							DeleteObject(brush);
+						}
+
+						RECT rectCenterLine = create_rect(0, (height / 2) - 1, width, 2);
+						brush = CreateSolidBrush(lineColor);
+						FillRect(hdc, &rectCenterLine, brush);
+						DeleteObject(brush);
+
+						HPEN pen = CreatePen(PS_SOLID, 2, lineColor);
+						SelectObject(hdc, GetStockObject(NULL_BRUSH));
+						SelectObject(hdc, pen);
+						Ellipse(hdc, width / 2 - 35, height / 2 - 35, width / 2 + 35, height / 2 + 35);
+						Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), 50);
+						Rectangle(hdc, width / 4, 300, (width / 4) + (width / 2), 352);
+
+						DeleteObject(pen);
+						DeleteObject(hdc);
+					}
+					break;
+					default:
+					{
+						HDC hdc = lpdis->hDC;
+						RECT rc = lpdis->rcItem;
+
+						TCHAR buffer[256];
+						GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 256);
+
+						SetBkMode(hdc, TRANSPARENT);
+						SetTextColor(hdc, RGB(0, 0, 0));
+						DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+						DeleteObject(hdc);
+					}
+					break;
+				}
 			}
 		}
 		break;
@@ -5957,6 +5996,7 @@ void toggle_tactics(bool b_enable)
 }
 
 
+//Initialized the tactics tab for a given team
 void init_tactics_tab()
 {
 	if (giPesVersion == 16)
@@ -5964,24 +6004,17 @@ void init_tactics_tab()
 		if (!gb_tactics_enabled)
 			toggle_tactics(TRUE);
 
-		gi_preset = 0;
-		gi_formation = 0;
+
+		gi_preset = -1;
+		gi_formation = -1;
 		gi_selected_player1 = 0;
 		gi_selected_player2 = 0;
-		Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[0].fluid);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
-		SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"0");
-		SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"0");
-		SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, L"");
-		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
-		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
-		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
-		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		populate_tactics_tab(teamOffset, 0, 0);
 
-
-		//Player Assignments begin
+		//Player Assignments BEGIN
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_RESETCONTENT, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_RESETCONTENT, 0, 0);
@@ -5995,7 +6028,6 @@ void init_tactics_tab()
 		//Indexes of currently selected player for the positions
 		int i_fk_lg = 11, i_fk_sh = 11, i_fk2 = 11, i_ck_left = 11, i_ck_right = 11, i_pk = 11, i_ptj1 = 11, i_ptj2 = 11, i_ptj3 = 11;
 		int player_indexes[11];
-		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 		for (int ii = 0; ii < 11; ii++)
 		{
 			int playerId = gteams[gn_teamsel].starting11[ii];
@@ -6085,43 +6117,56 @@ void init_tactics_tab()
 			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
 			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
 		}
-		//Player Assignments end
+		//Player Assignments END
 
 
-		wchar_t buff_support_range[2], buff_dline[2], buff_compactness[2];
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].attacking_style, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].buildup, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].attacking_zone, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].positioning, 0);
-		swprintf_s(buff_support_range, 2, L"%d", gteams[gn_teamsel].presets[0].support_range);
-		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].numbers_in_attack - 1, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].containment_area, 0);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].pressure, 0);
-		swprintf_s(buff_dline, 2, L"%d", gteams[gn_teamsel].presets[0].defensive_line);
-		SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buff_dline);
-		swprintf_s(buff_compactness, 2, L"%d", gteams[gn_teamsel].presets[0].compactness);
-		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
-		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].numbers_in_defense - 1, 0);
-
-
-		//Player positions
-		draw_tactics_bg();
-		for (int ii = 0; ii < 11; ii++)
-		{
-			player_formation_data player = gteams[gn_teamsel].presets[0].formations[0].players[ii];
-			set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
-		}
 		update_backline(teamOffset);
 	}
 }
 
 
-void draw_tactics_bg()
+//Populates the tactics tab's field for the specified preset and formation
+void populate_tactics_tab(int teamOffset, int preset, int formation)
 {
-	HDC hdc = GetDC(ghw_tab4);
+	if (preset != gi_preset)
+	{
+		Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[preset].fluid);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+		SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"0");
+		SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"0");
+		SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, L"");
+		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
 
-	DeleteObject(hdc);
+		wchar_t buff_support_range[2], buff_dline[2], buff_compactness[2];
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_style, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].buildup, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_zone, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].positioning, 0);
+		swprintf_s(buff_support_range, 2, L"%d", gteams[gn_teamsel].presets[preset].support_range);
+		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_attack - 1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].containment_area, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].pressure, 0);
+		swprintf_s(buff_dline, 2, L"%d", gteams[gn_teamsel].presets[preset].defensive_line);
+		SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buff_dline);
+		swprintf_s(buff_compactness, 2, L"%d", gteams[gn_teamsel].presets[preset].compactness);
+		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_defense - 1, 0);
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		player_formation_data player = gteams[gn_teamsel].presets[0].formations[0].players[ii];
+		set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
+	}
+	RECT rectFormation = create_rect(217, 5, 270, 370);
+	RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+	gi_preset = preset;
+	gi_formation = formation;
 }
 
 
@@ -6130,15 +6175,15 @@ void set_player_xy(int index, int player_id, byte pos, byte player_x, byte playe
 {
 	int label_size_x = 60, label_size_y = 17, button_size_x = 52, button_size_y = 17;
 	//Add 5 pixels of padding on all sides
-	int box_x = 217 + 5, box_y = 5 + 10, box_width = 270 - 10, box_height = 360 - 10;
+	int box_x = 217 + 5, box_y = 5 + 15, box_width = 260, box_height = 350;
 	//Actual pixel position of the center of the label and button
 	int pixel_x, pixel_y;
 	if (giPesVersion == 16)
 	{
-		//If gk force X and Y to 54 and 3 if they aren't for visual consistency, since the game will already do that upon match start
+		//If gk force X and Y to 52 and 3 if they aren't for visual consistency, since the game will already do that upon match start
 		if (pos == 0x00)
 		{
-			if (player_x != 54) player_x = 54;
+			if (player_x != 52) player_x = 52;
 			if (player_y != 3) player_y = 3;
 		}
 
@@ -6214,6 +6259,7 @@ wchar_t* get_position_name_from_byte(byte pos)
 	}
 }
 
+
 void update_backline(int teamOffset)
 {
 	int first_x = 507, first_y = 25;
@@ -6239,6 +6285,17 @@ void update_backline(int teamOffset)
 		SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
 		SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
 	}
+}
+
+
+RECT create_rect(int x, int y, int width, int height)
+{
+	RECT rect = RECT();
+	rect.left = x;
+	rect.top = y;
+	rect.right = x + width;
+	rect.bottom = y + height;
+	return rect;
 }
 
 

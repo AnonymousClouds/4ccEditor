@@ -2411,7 +2411,12 @@ void setup_tab4(HWND H)
 	y = 5;
 	hw_new = CreateWindowEx(0, _T("Button"), _T("Formation"),
 		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x, y, 270, 360, ghw_tab4, (HMENU)IDC_STATIC_F3, GetModuleHandle(NULL), NULL);
+		x, y, 270, 370, ghw_tab4, (HMENU)IDC_STATIC_F3, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(0, _T("Static"), _T(""),
+		SS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
+		x+5, y+15, 260, 350, ghw_tab4, (HMENU)IDB_TACT_BG, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Player 1"),
@@ -2530,7 +2535,7 @@ void setup_tab4(HWND H)
 	y = 5;
 	hw_new = CreateWindowEx(0, _T("Button"), _T("Lineup"),
 		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x, y, 183, 360, ghw_tab4, (HMENU)IDC_STATIC_F4, GetModuleHandle(NULL), NULL);
+		x, y, 183, 370, ghw_tab4, (HMENU)IDC_STATIC_F4, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("GK"),
@@ -2646,10 +2651,10 @@ void setup_tab4(HWND H)
 
 	//Formation Settings
 	x = 217;
-	y = 368;
+	y = 378;
 	hw_new = CreateWindowEx(0, _T("Button"), _T("Formation Settings"),
 		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x, y, 463, 217, ghw_tab4, (HMENU)IDC_STATIC_F6, GetModuleHandle(NULL), NULL);
+		x, y, 463, 207, ghw_tab4, (HMENU)IDC_STATIC_F6, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Attacking Style:"),
