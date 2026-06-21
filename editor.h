@@ -552,26 +552,32 @@ struct stripSet
 	unsigned long stripTeamId; //3 bytes, Team ID * 0x40
 };
 
-//Position byte map:
-//0x00 - GK
-//0x01 - CB
-//0x02 - LB
-//0x03 - RB
-//0x04 - DMF
-//0x05 - CMF
-//0x06 - LMF
-//0x07 - RMF
-//0x08 - AMF
-//0x09 - LWF
-//0x0A - RWF
-//0xOB - SS
-//0xOC - CF
 
-//X byte range: 0x00-0x68
-//Y byte range: 0x00-0x30
 struct player_formation_data
 {
-	byte x, y, pos;
+	//Range:
+	//16: 0x00-0x68
+	byte x;
+
+	//Range:
+	//16: 0x00-0x30
+	byte y;
+
+	//Position byte map:
+	//0x00 - GK
+	//0x01 - CB
+	//0x02 - LB
+	//0x03 - RB
+	//0x04 - DMF
+	//0x05 - CMF
+	//0x06 - LMF
+	//0x07 - RMF
+	//0x08 - AMF
+	//0x09 - LWF
+	//0x0A - RWF
+	//0xOB - SS
+	//0xOC - CF
+	byte pos;
 };
 
 struct formation_entry
@@ -753,12 +759,12 @@ struct team_entry
 		manager_id = 0;
 		stadium_id = 0;
 
-		fk_taker_long = 0;
-		fk_taker_short = 0;
-		fk_taker_2 = 0;
-		ck_taker_left = 0;
-		ck_taker_right = 0;
-		pk_taker = 0;
+		fk_taker_long = 0xFF;
+		fk_taker_short = 0xFF;
+		fk_taker_2 = 0xFF;
+		ck_taker_left = 0xFF;
+		ck_taker_right = 0xFF;
+		pk_taker = 0xFF;
 		auto_substitution = 0;
 		auto_offside_trap = 0;
 		auto_preset_change = 0;

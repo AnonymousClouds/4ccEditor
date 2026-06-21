@@ -76,6 +76,12 @@ void fix_database();
 void scroll_player_up();
 void scroll_player_down();
 void update_tables();
+void init_tactics_tab();
+void toggle_tactics(bool b_enable);
+void draw_tactics_bg();
+void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y);
+void update_backline(int teamOffset);
+wchar_t* get_position_name_from_byte(byte pos);
 
 void SD_OnHVScroll(HWND hwnd, int bar, UINT code);
 void SD_ScrollClient(HWND hwnd, int bar, int pos);
@@ -108,6 +114,8 @@ int g_prevx=0;
 int giPesVersion = 0;
 int g_bumpAmount = 0;
 const uint8_t* gpMasterKey;
+int gi_preset, gi_formation, gi_selected_player1, gi_selected_player2;
+bool gb_tactics_enabled = false;
 
 appearance_map g_umap_pid_to_startByte; //Map from player ID to start byte of appearance entry
 
@@ -694,6 +702,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 
 			DestroyWindow(H);
 		break;
+		break;
 		case WM_DESTROY:
 			DestroyWindow(ghAatfbox);
 			PostQuitMessage(0);
@@ -859,10 +868,15 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 								{
 									gn_listsel = -1;
 									show_player_info(-1);
-								}								
+								}	
+
+								init_tactics_tab();
 							}
 							else
 							{
+								if (gb_tactics_enabled)
+									toggle_tactics(FALSE);
+
 								if(gn_listsel > -1)
 								{
 									gb_forceupdate = true;
@@ -1430,6 +1444,9 @@ void data_handler(const TCHAR *pcs_file_name, int pesVersion)
 	SendDlgItemMessage(ghw_tab2, IDC_MOTI_PK, UDM_SETRANGE, 0, MAKELPARAM(1, 4));
 	SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC1, UDM_SETRANGE, 0, MAKELPARAM(0, 122));
 	SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC2, UDM_SETRANGE, 0, MAKELPARAM(0, 122));
+
+	//Disable all tactics controls
+	toggle_tactics(FALSE);
 
 	if (giPesVersion == 15)
 	{
@@ -4036,45 +4053,88 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 		}
 		break;
 
-		/*case WM_CTLCOLORBTN:
+		case WM_DRAWITEM:
 		{
-			if (gplayers)
+			LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)L; // item drawing information
+			if (lpdis->CtlType == ODT_BUTTON)
 			{
-				int red, green, blue;
-				wchar_t buffer[5];
-				if ((HWND)L == GetDlgItem(H, IDB_TCOLOR1))
+				switch (LOWORD(W))
 				{
-					DeleteObject(gTeamColor1);
+					case IDB_TACT_PL1:
+					case IDB_TACT_PL2:
+					case IDB_TACT_PL3:
+					case IDB_TACT_PL4:
+					case IDB_TACT_PL5:
+					case IDB_TACT_PL6:
+					case IDB_TACT_PL7:
+					case IDB_TACT_PL8:
+					case IDB_TACT_PL9:
+					case IDB_TACT_PL10:
+					case IDB_TACT_PL11:
+					case IDB_TACT_BN1:
+					case IDB_TACT_BN2:
+					case IDB_TACT_BN3:
+					case IDB_TACT_BN4:
+					case IDB_TACT_BN5:
+					case IDB_TACT_BN6:
+					case IDB_TACT_BN7:
+					case IDB_TACT_BN8:
+					case IDB_TACT_BN9:
+					case IDB_TACT_BN10:
+					case IDB_TACT_BN11:
+					{
+						HWND hTabCtrl = GetDlgItem(H, IDC_TAB_MAIN);
+						HDC hdc = lpdis->hDC;
+						RECT rc = lpdis->rcItem;
+						COLORREF bkColor;
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_GETTEXT, 4, (LPARAM)buffer);
-					red = floor(4.05 * _wtoi(buffer));
+						TCHAR buffer[4];
+						GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 4);
+						if (wcscmp(buffer, L"GK") == 0)
+							bkColor = RGB(219, 161, 19);
+						else if (wcscmp(buffer, L"LB") == 0 || wcscmp(buffer, L"RB") == 0 || wcscmp(buffer, L"CB") == 0)
+							bkColor = RGB(36, 105, 217);
+						else if (wcscmp(buffer, L"CMF") == 0 ||  wcscmp(buffer, L"AMF") == 0 || wcscmp(buffer, L"DMF") == 0 || wcscmp(buffer, L"LMF") == 0 || wcscmp(buffer, L"RMF") == 0)
+							bkColor = RGB(75, 159, 35);
+						else if (wcscmp(buffer, L"SS") == 0 || wcscmp(buffer, L"CF") == 0 ||wcscmp(buffer, L"LWF") == 0 || wcscmp(buffer, L"RWF") == 0)
+							bkColor = RGB(190, 38, 46);
+						else
+							bkColor = RGB(0, 0, 0);
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_GETTEXT, 4, (LPARAM)buffer);
-					green = floor(4.05 * _wtoi(buffer));
+						HBRUSH brush = CreateSolidBrush(bkColor);
+						FillRect(hdc, &rc, brush);
+						DeleteObject(brush);
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_GETTEXT, 4, (LPARAM)buffer);
-					blue = floor(4.05 * _wtoi(buffer));
-					gTeamColor1 = CreateSolidBrush(RGB(red, green, blue));
-					return (INT_PTR)gTeamColor1;
+						//HBRUSH hBorder = CreateSolidBrush(RGB(44, 62, 80));
+						//FrameRect(hdc, &rc, hBorder);
+						//DeleteObject(hBorder);
+
+						SetBkMode(hdc, TRANSPARENT);
+						SetTextColor(hdc, RGB(255, 255, 255));
+						DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+						DeleteObject(hdc);
+					}
+					default:
+						break;
 				}
-				else if ((HWND)L == GetDlgItem(H, IDB_TCOLOR2))
-				{
-					DeleteObject(gTeamColor2);
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_GETTEXT, 4, (LPARAM)buffer);
-					red = floor(4.05 * _wtoi(buffer));
+			}
+			else if (lpdis->CtlType == ODT_STATIC)
+			{
+				HWND hTabCtrl = GetDlgItem(H, IDC_TAB_MAIN);
+				HDC hdc = lpdis->hDC;
+				RECT rc = lpdis->rcItem;
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_GETTEXT, 4, (LPARAM)buffer);
-					green = floor(4.05 * _wtoi(buffer));
+				TCHAR buffer[256];
+				GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 256);
 
-					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_GETTEXT, 4, (LPARAM)buffer);
-					blue = floor(4.05 * _wtoi(buffer));
-					gTeamColor2 = CreateSolidBrush(RGB(red, green, blue));
-					return (INT_PTR)gTeamColor2;
-				}
+				SetBkMode(hdc, TRANSPARENT);
+				SetTextColor(hdc, RGB(0, 0, 0));
+				DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+				DeleteObject(hdc);
 			}
 		}
-		break;*/
+		break;
 
 		case WM_COMMAND:
 		{
@@ -5777,6 +5837,410 @@ BOOL CALLBACK bogloDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam
 	}
 	return TRUE;
 }
+
+
+//Disable or enable all tactics controls at once
+void toggle_tactics(bool b_enable)
+{
+	gb_tactics_enabled = b_enable;
+
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRESET), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRESET));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_CURPL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_CURPL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLNXT), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLNXT));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLPRV), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLPRV));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKLG), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKLG));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKSH), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKSH));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FK2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FK2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKR), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKR));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PK), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PK));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_ASTY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_ASTY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_BLD), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_BLD));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AZON), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AZON));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_SLDPOS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_SLDPOS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_DSTY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_DSTY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CAREA), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CAREA));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRES), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRES));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_SRNG), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_SRNG));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_DLNE), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_DLNE));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_CMPT), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_CMPT));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_ANUM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_ANUM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_DNUM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_DNUM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_STATS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_STATS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_FLUID));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL4), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL4));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL5), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL5));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL6), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL6));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL7), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL7));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL8), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL8));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL9), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL9));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL10), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL10));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL11), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL11));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN4), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN4));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN5), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN5));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN6), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN6));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN7), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN7));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN8), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN8));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN9), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN9));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN10), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN10));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11));
+}
+
+
+void init_tactics_tab()
+{
+	if (giPesVersion == 16)
+	{
+		if (!gb_tactics_enabled)
+			toggle_tactics(TRUE);
+
+		gi_preset = 0;
+		gi_formation = 0;
+		gi_selected_player1 = 0;
+		gi_selected_player2 = 0;
+		Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[0].fluid);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+		SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"0");
+		SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"0");
+		SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, L"");
+		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+		EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+
+
+		//Player Assignments begin
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_RESETCONTENT, 0, 0);
+
+		//Indexes of currently selected player for the positions
+		int i_fk_lg = 11, i_fk_sh = 11, i_fk2 = 11, i_ck_left = 11, i_ck_right = 11, i_pk = 11, i_ptj1 = 11, i_ptj2 = 11, i_ptj3 = 11;
+		int player_indexes[11];
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (int ii = 0; ii < 11; ii++)
+		{
+			int playerId = gteams[gn_teamsel].starting11[ii];
+			for (int jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id - teamOffset == playerId)
+				{
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, ii, playerId);
+					//Update corresponding variable if the current player is the selected one for a position
+					if (i_fk_lg == 11 && gteams[gn_teamsel].fk_taker_long == playerId)
+						i_fk_lg = ii;
+					if (i_fk_sh == 11 && gteams[gn_teamsel].fk_taker_short == playerId)
+						i_fk_sh = ii;
+					if (i_fk2 == 11 && gteams[gn_teamsel].fk_taker_2 == playerId)
+						i_fk2 = ii;
+					if (i_ck_left == 11 && gteams[gn_teamsel].ck_taker_left == playerId)
+						i_ck_left = ii;
+					if (i_ck_right == 11 && gteams[gn_teamsel].ck_taker_right == playerId)
+						i_ck_right = ii;
+					if (i_pk == 11 && gteams[gn_teamsel].pk_taker == playerId)
+						i_pk = ii;
+					if (i_ptj1 == 11 && gteams[gn_teamsel].players_to_join_attack[0] == playerId)
+						i_ptj1 = ii;
+					if (i_ptj2 == 11 && gteams[gn_teamsel].players_to_join_attack[1] == playerId)
+						i_ptj2 = ii;
+					if (i_ptj3 == 11 && gteams[gn_teamsel].players_to_join_attack[2] == playerId)
+						i_ptj3 = ii;
+
+					player_indexes[ii] == jj;
+					break;
+				}
+			}
+		}
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, 11, 0xFF);
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETCURSEL, i_fk_lg, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETCURSEL, i_fk_sh, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETCURSEL, i_fk2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETCURSEL, i_ck_left, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETCURSEL, i_ck_right, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETCURSEL, i_pk, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETCURSEL, i_ptj1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETCURSEL, i_ptj2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, i_ptj3, 0);
+		if (i_ptj2 == 11)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+		}
+		if (i_ptj1 == 11)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+		}
+		//Player Assignments end
+
+
+		wchar_t buff_support_range[2], buff_dline[2], buff_compactness[2];
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].attacking_style, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].buildup, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].attacking_zone, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].positioning, 0);
+		swprintf_s(buff_support_range, 2, L"%d", gteams[gn_teamsel].presets[0].support_range);
+		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].numbers_in_attack - 1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].containment_area, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].pressure, 0);
+		swprintf_s(buff_dline, 2, L"%d", gteams[gn_teamsel].presets[0].defensive_line);
+		SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buff_dline);
+		swprintf_s(buff_compactness, 2, L"%d", gteams[gn_teamsel].presets[0].compactness);
+		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[0].numbers_in_defense - 1, 0);
+
+
+		//Player positions
+		draw_tactics_bg();
+		for (int ii = 0; ii < 11; ii++)
+		{
+			player_formation_data player = gteams[gn_teamsel].presets[0].formations[0].players[ii];
+			set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
+		}
+		update_backline(teamOffset);
+	}
+}
+
+
+void draw_tactics_bg()
+{
+	HDC hdc = GetDC(ghw_tab4);
+
+	DeleteObject(hdc);
+}
+
+
+//Pass in the raw byte values of X and Y, will automatically derive the correct positions for them based on the version
+void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y)
+{
+	int label_size_x = 60, label_size_y = 17, button_size_x = 52, button_size_y = 17;
+	//Add 5 pixels of padding on all sides
+	int box_x = 217 + 5, box_y = 5 + 10, box_width = 270 - 10, box_height = 360 - 10;
+	//Actual pixel position of the center of the label and button
+	int pixel_x, pixel_y;
+	if (giPesVersion == 16)
+	{
+		//If gk force X and Y to 54 and 3 if they aren't for visual consistency, since the game will already do that upon match start
+		if (pos == 0x00)
+		{
+			if (player_x != 54) player_x = 54;
+			if (player_y != 3) player_y = 3;
+		}
+
+		pixel_x = ((double)player_x / (double)0x68) * box_width;
+		pixel_y = box_height - (((double)player_y / (double)0x30) * box_height);
+
+		HWND label = GetDlgItem(ghw_tab4, IDC_STATIC_PL1 + index);
+		HWND button = GetDlgItem(ghw_tab4, IDB_TACT_PL1 + index);
+
+		LPWSTR name;
+		SIZE name_width;
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			if (gplayers[ii].id == player_id)
+			{
+				name = gplayers[ii].name;
+				break;
+			}
+		}
+		GetTextExtentPoint32(GetWindowDC(ghw_tab4), name, wcslen(name), &name_width);
+		LPWSTR position_name = get_position_name_from_byte(pos);
+
+		SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
+		SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
+		MoveWindow(label, box_x + max(pixel_x - (min(name_width.cx, label_size_x) / 2), 0), box_y + max(pixel_y - 17, 0), min(name_width.cx, label_size_x), label_size_y, true);
+		MoveWindow(button, box_x + max(pixel_x - (button_size_x / 2), 0), box_y + (pixel_y - label_size_y < 0 ? label_size_y : pixel_y), button_size_x, button_size_y, true);
+	}
+}
+
+wchar_t* get_position_name_from_byte(byte pos)
+{
+	switch (pos)
+	{
+		case 0x01:
+			return L"CB";
+			break;
+		case 0x02:
+			return L"LB";
+			break;
+		case 0x03:
+			return L"RB";
+			break;
+		case 0x04:
+			return L"DMF";
+			break;
+		case 0x05:
+			return L"CMF";
+			break;
+		case 0x06:
+			return L"LMF";
+			break;
+		case 0x07:
+			return L"RMF";
+			break;
+		case 0x08:
+			return L"AMF";
+			break;
+		case 0x09:
+			return L"LWF";
+			break;
+		case 0x0A:
+			return L"RWF";
+			break;
+		case 0x0B:
+			return L"SS";
+			break;
+		case 0x0C:
+			return L"CF";
+			break;
+		default:
+			return L"GK";
+			break;
+	}
+}
+
+void update_backline(int teamOffset)
+{
+	int first_x = 507, first_y = 25;
+	int label_size_x = 106, label_size_y = 17, button_size_x = 52, button_size_y = 17;
+	LPWSTR name;
+	LPWSTR position_name;
+	for (int ii = 0; ii < 11; ii++)
+	{
+		int player_id = teamOffset + gteams[gn_teamsel].bench_order[ii];
+		for (int jj = 0; jj < gnum_players; jj++)
+		{
+			if (gplayers[jj].id == player_id)
+			{
+				name = gplayers[jj].name;
+				position_name = get_position_name_from_byte(gplayers[jj].reg_pos);
+				break;
+			}
+		}
+
+		HWND label = GetDlgItem(ghw_tab4, IDC_STATIC_BN1 + ii);
+		HWND button = GetDlgItem(ghw_tab4, IDB_TACT_BN1 + ii);
+
+		SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
+		SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
+	}
+}
+
 
 BOOL CALLBACK aatf_sing_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
