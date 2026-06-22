@@ -557,10 +557,12 @@ struct player_formation_data
 {
 	//Range:
 	//16: 0x00-0x68
+	//17: 0x00-0x68
 	byte x;
 
 	//Range:
 	//16: 0x00-0x30
+	//17: 0x00-0x30
 	byte y;
 
 	//Position byte map:
@@ -610,6 +612,31 @@ struct formation_entry
 	}
 };
 
+struct advanced_instruction {
+	//0x00 - OFF
+	//0x01 - Hug the Touchline
+	//0x02 - False No. 9
+	//0x03 - False Full Backs
+	//0x04 - Attacking Full Backs
+	//0x05 - Wing Rotation
+	//0x06 - Tiki-Taka
+	//0x07 - Centering Targets
+	//0x08 - Swarm the Box
+	//0x09 - Deep Defensive Line
+	//0x0A - Gegenpress
+	//0x0B - Tight Marking (Invalid in edit mode, should not be allowed to be selected by the editor)
+	//0x0C - Counter Target
+	char instruction;
+	char player_id;
+	//Constructor
+
+	advanced_instruction()
+	{
+		instruction = 0x00;
+		player_id = 0x00;
+	}
+};
+
 struct preset_entry
 {
 	bool attacking_style; //0 = Counter Attack, 1 = Possession
@@ -628,6 +655,8 @@ struct preset_entry
 	byte numbers_in_defense; //1 = Few, 2 = Medium, 3 = Many
 
 	formation_entry formations[3];
+	advanced_instruction atk_instructions[2];
+	advanced_instruction def_instructions[2];
 
 	//Constructor
 	preset_entry()
@@ -650,6 +679,12 @@ struct preset_entry
 		{
 			formations[ii] = formation_entry();
 		}
+
+		for (int ii = 0; ii < 2; ii++)
+		{
+			atk_instructions[ii] = advanced_instruction();
+			def_instructions[ii] = advanced_instruction();
+		}
 	}
 
 	bool operator==(const preset_entry& rhs)
@@ -671,6 +706,14 @@ struct preset_entry
 
 		for (int ii = 0; ii < 3; ii++)
 			b_out = b_out && this->formations[ii] == rhs.formations[ii];
+
+		for (int ii = 0; ii < 2; ii++)
+		{
+			b_out = b_out && this->atk_instructions[ii].instruction == rhs.atk_instructions[ii].instruction;
+			b_out = b_out && this->atk_instructions[ii].player_id == rhs.atk_instructions[ii].player_id;
+			b_out = b_out && this->def_instructions[ii].instruction == rhs.def_instructions[ii].instruction;
+			b_out = b_out && this->def_instructions[ii].player_id == rhs.def_instructions[ii].player_id;
+		}
 
 		return b_out;
 	}
@@ -708,6 +751,7 @@ struct team_entry
 	char captain_ind;
 	byte auto_substitution;
 	bool auto_offside_trap;
+	bool auto_change_atk_def_levels;
 	bool auto_preset_change;
 
 	char color1_red;
@@ -768,6 +812,7 @@ struct team_entry
 		auto_substitution = 0;
 		auto_offside_trap = 0;
 		auto_preset_change = 0;
+		auto_change_atk_def_levels = 0;
 		for (int ii = 0; ii < 3; ii++)
 		{
 			presets[ii] = preset_entry();
@@ -808,6 +853,7 @@ struct team_entry
 		b_out = b_out && this->auto_substitution == rhs.auto_substitution;
 		b_out = b_out && this->auto_offside_trap == rhs.auto_offside_trap;
 		b_out = b_out && this->auto_preset_change == rhs.auto_preset_change;
+		b_out = b_out && this->auto_change_atk_def_levels == rhs.auto_change_atk_def_levels;
 
 		for (ii = 0; ii < 3; ii++) b_out = b_out && (this->presets[ii] == rhs.presets[ii]);
 
