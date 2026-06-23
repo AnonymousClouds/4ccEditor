@@ -4563,7 +4563,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					{
 						case IDT_TACT_PLX:
 						{
-							if (giPesVersion == 16 && gi_selected_player_field != -1 && !gb_updating_tactics)
+							if ((giPesVersion == 16 || giPesVersion == 17) && gi_selected_player_field != -1 && !gb_updating_tactics)
 							{
 								TCHAR buffer[4];
 								GetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer, 4);
@@ -4596,7 +4596,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 						case IDT_TACT_PLY:
 						{
-							if (giPesVersion == 16 && gi_selected_player_field != -1 && !gb_updating_tactics)
+							if ((giPesVersion == 16 || giPesVersion == 17) && gi_selected_player_field != -1 && !gb_updating_tactics)
 							{
 								TCHAR buffer[4];
 								GetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer, 4);
@@ -4629,7 +4629,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 						case IDT_TACT_SRNG:
 						{
-							if (giPesVersion == 16 && !gb_updating_tactics)
+							if ((giPesVersion == 16 || giPesVersion == 17) && !gb_updating_tactics)
 							{
 								TCHAR buffer[3];
 								GetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer, 3);
@@ -4654,7 +4654,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 						case IDT_TACT_DLNE:
 						{
-							if (giPesVersion == 16 && !gb_updating_tactics)
+							if ((giPesVersion == 16 || giPesVersion == 17) && !gb_updating_tactics)
 							{
 								TCHAR buffer[3];
 								GetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer, 3);
@@ -4679,7 +4679,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 						case IDT_TACT_CMPT:
 						{
-							if (giPesVersion == 16 && !gb_updating_tactics)
+							if ((giPesVersion == 16 || giPesVersion == 17) && !gb_updating_tactics)
 							{
 								TCHAR buffer[3];
 								GetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer, 3);
@@ -4712,9 +4712,19 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				{
 					switch (LOWORD(W))
 					{
+						case IDB_TACT_FLUID:
+						{
+							if (giPesVersion == 16 || giPesVersion == 17)
+							{
+								gteams[gn_teamsel].presets[gi_preset].fluid = !gteams[gn_teamsel].presets[gi_preset].fluid;
+							}
+						}
+						break;
+
 						case IDB_TACT_PLNXT:
 						case IDB_TACT_PLPRV:
 						{
+							gb_updating_tactics = true;
 							if (giPesVersion == 16 || giPesVersion == 17)
 							{
 								if (gi_selected_player_field == -1)
@@ -4746,6 +4756,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 										swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
 										SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
 										SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos - 1, 0);
 
 										if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos != 0x00)
 										{
@@ -4767,6 +4778,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 								gteams[gn_teamsel].b_changed = true;
 							}
+							gb_updating_tactics = false;
 						}
 						break;
 
@@ -7097,6 +7109,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 		swprintf_s(buff_support_range, 3, L"%d", gteams[gn_teamsel].presets[preset].support_range);
 		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_attack - 1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_DSTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].defensive_style, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].containment_area, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].pressure, 0);
 		swprintf_s(buff_dline, 3, L"%d", gteams[gn_teamsel].presets[preset].defensive_line);

@@ -400,7 +400,7 @@ void fill_team_tactics16(int &current_byte, void* ghdescriptor, team_entry* gtea
 	gteams[t_ind].fk_taker_short = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
 	gteams[t_ind].fk_taker_2 = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
 	gteams[t_ind].ck_taker_left = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
-	gteams[t_ind].ck_taker_left = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
+	gteams[t_ind].ck_taker_right = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
 	gteams[t_ind].pk_taker = (byte)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
 	gteams[t_ind].captain_ind = (char)read_dataOld(0, 1 * 8, current_byte, pDescriptorOld);
 	for (int ii = 0; ii < 3; ii++)
@@ -824,7 +824,7 @@ void extract_team_tactics16(team_entry team, int &current_byte, void* ghdescript
 	write_dataOld(team.fk_taker_short, 0, 1 * 8, current_byte, pDescriptorOld);
 	write_dataOld(team.fk_taker_2, 0, 1 * 8, current_byte, pDescriptorOld);
 	write_dataOld(team.ck_taker_left, 0, 1 * 8, current_byte, pDescriptorOld);
-	write_dataOld(team.ck_taker_left, 0, 1 * 8, current_byte, pDescriptorOld);
+	write_dataOld(team.ck_taker_right, 0, 1 * 8, current_byte, pDescriptorOld);
 	write_dataOld(team.pk_taker, 0, 1 * 8, current_byte, pDescriptorOld);
 	write_dataOld(team.captain_ind, 0, 1 * 8, current_byte, pDescriptorOld);
 	for (int ii = 0; ii < 3; ii++)
