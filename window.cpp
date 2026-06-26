@@ -2227,7 +2227,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("X:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+10, y+54, 20, 17, ghw_tab4, (HMENU)IDC_STATIC_F10, GetModuleHandle(NULL), NULL);
+		x+10, y+54, 15, 17, ghw_tab4, (HMENU)IDC_STATIC_F10, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
@@ -2239,7 +2239,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Y:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+103, y+54, 20, 17, ghw_tab4, (HMENU)IDC_STATIC_F11, GetModuleHandle(NULL), NULL);
+		x+103, y+54, 15, 17, ghw_tab4, (HMENU)IDC_STATIC_F11, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
@@ -2251,7 +2251,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Selected Player:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+10, y+82, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F12, GetModuleHandle(NULL), NULL);
+		x+10, y+82, 85, 17, ghw_tab4, (HMENU)IDC_STATIC_F12, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
@@ -2716,7 +2716,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Support Range:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+10, y+133, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F27, GetModuleHandle(NULL), NULL);
+		x+10, y+133, 90, 17, ghw_tab4, (HMENU)IDC_STATIC_F27, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
@@ -2786,7 +2786,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Defensive Line:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+208, y+105, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F32, GetModuleHandle(NULL), NULL);
+		x+208, y+105, 90, 17, ghw_tab4, (HMENU)IDC_STATIC_F32, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
@@ -2803,7 +2803,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Compactness:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+208, y+133, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F33, GetModuleHandle(NULL), NULL);
+		x+208, y+133, 90, 17, ghw_tab4, (HMENU)IDC_STATIC_F33, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""),
