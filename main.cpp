@@ -3456,7 +3456,7 @@ LRESULT CALLBACK cb2_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 //Subclassed control procedure
 LRESULT CALLBACK scale_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
-					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	switch(M)
 	{
@@ -3473,7 +3473,7 @@ LRESULT CALLBACK scale_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			Y = ceil(pri->scale*winrect.top);
 			cx = ceil(pri->scale*(winrect.right-winrect.left));
 			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
-			
+
 			if(GetParent(H)==ghw_main)
 				offset = g_prevx;
 			SetWindowPos(H, HWND_TOPMOST, X-offset, Y, cx, cy, SWP_NOREDRAW|SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
@@ -3501,7 +3501,7 @@ LRESULT CALLBACK scale_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 //Subclassed control procedure
 LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
-					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	switch(M)
 	{
@@ -3544,16 +3544,19 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					GetCursorPos(&pos);
 					MapWindowPoints(NULL, ghw_tab4, &pos, 1);
 
+					int player_index = -1;
+					if (id <= IDB_TACT_PL11) player_index = id - IDB_TACT_PL1;
+					else player_index = id - IDC_STATIC_PL1;
+
 					//If click is in bounds of the field, track where it started and who was clicked
 					if (pos.x >= 222 && pos.x <= 482 && pos.y >= 20 && pos.y <= 370)
 					{
-						gb_is_dragging = true;
-						gi_drag_x = pos.x;
-						gi_drag_y = pos.y;
-
-						int player_index = -1;
-						if (id <= IDB_TACT_PL11) player_index = id - IDB_TACT_PL1;
-						else player_index = id - IDC_STATIC_PL1;
+						if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+						{
+							gb_is_dragging = true;
+							gi_drag_x = pos.x;
+							gi_drag_y = pos.y;
+						}
 
 						if (player_index != gi_selected_player_field)
 						{
@@ -3610,9 +3613,12 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 							gb_updating_tactics = false;
 						}
 
-						RECT bounds;
-						GetWindowRect(GetDlgItem(ghw_tab4, IDB_TACT_BG), &bounds);
-						ClipCursor(&bounds);
+						if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+						{
+							RECT bounds;
+							GetWindowRect(GetDlgItem(ghw_tab4, IDB_TACT_BG), &bounds);
+							ClipCursor(&bounds);
+						}
 					}
 				}
 			}
@@ -3623,6 +3629,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 		{
 			if (gb_is_dragging && gb_tactics_enabled)
 			{
+				gb_updating_tactics = true;
 				POINT pos;
 				GetCursorPos(&pos);
 				MapWindowPoints(NULL, ghw_tab4, &pos, 1);
@@ -3645,9 +3652,29 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					
 					set_player_xy(gi_selected_player_field, player_id, -1, player_x, player_y, false, false);
 
+					if (abs(gi_drag_x - pos.x) > (width / x_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = player_x;
+						wchar_t buff_x[4];
+						swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+						gi_drag_x = pos.x;
+						gteams[gn_teamsel].b_changed = true;
+					}
+					if (abs(gi_drag_y - pos.y) > (height / y_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = player_y;
+						wchar_t buff_y[4];
+						swprintf_s(buff_y, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+						gi_drag_y = pos.y;
+						gteams[gn_teamsel].b_changed = true;
+					}
+
 					if (abs(gi_drag_x - pos.x) > (width / x_range)) gi_drag_x = pos.x;
 					if (abs(gi_drag_y - pos.y) > (height / y_range)) gi_drag_y = pos.y;
 				}
+				gb_updating_tactics = false;
 			}
 		}
 		break;
@@ -3658,8 +3685,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			if (gb_is_dragging)
 			{
 				gb_is_dragging = false;
-				gi_drag_x = -1;
-				gi_drag_y = -1;
+				gb_updating_tactics = true;
 
 				ClipCursor(NULL);
 
@@ -3692,6 +3718,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
 						SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
 						gi_drag_x = pos.x;
+						gteams[gn_teamsel].b_changed = true;
 					}
 					if (abs(gi_drag_y - pos.y) > (height / y_range))
 					{
@@ -3700,12 +3727,18 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						swprintf_s(buff_y, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
 						SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
 						gi_drag_y = pos.y;
+						gteams[gn_teamsel].b_changed = true;
 					}
-
-					//Redraw the region because the entire process of draging a player is a graphical mess
-					RECT rectFormation = create_rect(217, 5, 270, 370);
-					RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 				}
+
+				gi_drag_x = -1;
+				gi_drag_y = -1;
+
+				//Redraw the region because the entire process of draging a player is a graphical mess
+				RECT rectFormation = create_rect(217, 5, 270, 370);
+				RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+				gb_updating_tactics = false;
 			}
 		}
 		break;
@@ -4407,7 +4440,10 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 
 						SetTextColor(hdc, RGB(0, 0, 0));
-						DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+						if (LOWORD(W) < IDC_STATIC_BN1)
+							DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+						else
+							DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
 						DeleteObject(hdc);
 					}
 					break;
@@ -4788,9 +4824,13 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
 								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
 
-								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x = x;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = x;
 
 								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, x, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+
+								//Redraw the region because the entire process of moving a player is a graphical mess
+								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 								gteams[gn_teamsel].b_changed = true;
 							}
@@ -4821,9 +4861,13 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
 								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
 
-								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].y = y;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = y;
 
-								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x, y);
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x, y);
+
+								//Redraw the region because the entire process of moving a player is a graphical mess
+								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 								gteams[gn_teamsel].b_changed = true;
 							}
@@ -4967,6 +5011,10 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
 											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), TRUE);
 											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
 										}
 										else
 										{
@@ -4974,6 +5022,10 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
 											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
 											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
 										}
 										break;
 									}
