@@ -55,6 +55,11 @@ BEGIN
 		MENUITEM "&Save squad",								IDM_TEAM_SAVES
 		MENUITEM "&Load squad",								IDM_TEAM_LOADS
     END
+	POPUP "&Tactics"
+	BEGIN
+		MENUITEM "&Export nightly", IDM_TACT_NIGHTS
+		MENUITEM "&Import nightly", IDM_TACT_NIGHTL
+	END
 	POPUP "&Database"
     BEGIN
 		POPUP "&AATF"
