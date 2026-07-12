@@ -48,6 +48,9 @@ void import_squad(HWND);
 void export_nightly(HWND);
 void import_nightly(HWND);
 
+void save_tactical_data(std::ofstream&, int);
+void load_tactical_data(std::ifstream&, int);
+
 void extract_player_entry(player_entry, int &);
 
 void extract_team_info(team_entry, int &);
@@ -92,7 +95,7 @@ int SD_GetScrollPos(HWND hwnd, int bar, UINT code);
 
 //----------------------------------------------------------------------
 /*Global variables*/
-char gc_ver4ccs[] = "20a";
+char gc_ver4ccs[] = "21a";
 char gc_ver4ccn[] = "001";
 HINSTANCE ghinst;			//Main window instance
 HINSTANCE hPesDecryptDLL;	//Handle to libpesXcrypter.dll 
@@ -112,7 +115,7 @@ int* gn_teamArrayIndToCb = NULL; //vice versa
 int gnum_players, gnum_teams, gn_listsel=-1, gn_teamsel=-1, gn_forceupdate=-1;
 bool gb_forceupdate = false;
 bool gb_firstsave = true;
-bool gb_importStats = true, gb_importAes = true; //Squad import options
+bool gb_importStats = true, gb_importAes = true, gb_importTact = true; //Squad import options
 int gn_oldysize = 642;
 int g_prevx=0;
 int giPesVersion = 0;
@@ -6047,6 +6050,9 @@ BOOL CALLBACK importDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 			if(gb_importAes) Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_AEST), BST_CHECKED);
 			else Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_AEST), BST_UNCHECKED);
 
+			if(gb_importTact) Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_TACT), BST_CHECKED);
+			else Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_TACT), BST_UNCHECKED);
+
 			//SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
 		}
 		break; 
@@ -6058,6 +6064,7 @@ BOOL CALLBACK importDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 				{
 					gb_importStats = IsDlgButtonChecked(hwnd, IDB_IMPO_STAT);
 					gb_importAes = IsDlgButtonChecked(hwnd, IDB_IMPO_AEST);
+					gb_importTact = IsDlgButtonChecked(hwnd, IDB_IMPO_TACT);
 					EndDialog(hwnd, IDC_OK);
 				}
 				break;
@@ -6526,6 +6533,11 @@ void export_squad(HWND hwnd)
 		//Write out team shirt numbers
 		output_file.write((char*)gteams[gn_teamCbIndToArray[csel]].numbers, sizeof(gteams[gn_teamCbIndToArray[csel]].numbers));
 
+		if (gb_tactics_enabled)
+		{
+			save_tactical_data(output_file, gn_teamCbIndToArray[csel]);
+		}
+
 		//Close filestream
 		output_file.close();
 	}
@@ -6654,6 +6666,21 @@ void import_squad(HWND hwnd)
 				}
 			}
 
+			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17))
+			{
+				for (int teamIndex = 0; teamIndex < gnum_teams; teamIndex++)
+				{
+					int teamId = gteams[gn_teamCbIndToArray[csel]].id;
+					if (gteams[teamIndex].id == teamId)
+					{
+						load_tactical_data(input_file, teamIndex);
+						break;
+					}
+				}
+
+				init_tactics_tab();
+			}
+
 			int num_lv_entries = ListView_GetItemCount(GetDlgItem(ghw_main, IDC_NAME_LIST));
 			for(ii=0;ii<num_lv_entries;ii++)
 			{
@@ -6712,6 +6739,7 @@ void export_nightly(HWND hwnd)
 
 	if (GetSaveFileName(&ofn))
 	{
+
 		//strcpy(outPath, T2A(tOutPath));
 		//Open file stream
 		std::ofstream output_file(outPath, std::ios::binary);
@@ -6729,73 +6757,7 @@ void export_nightly(HWND hwnd)
 		_ltoa_s(gteams[teamIndex].id, cTeamId, 8, 10);
 		output_file.write(cTeamId, 8);
 
-		char c_output;
-		//Write each preset and formation
-		for (int ii = 0; ii < 3; ii++)
-		{
-			for (int jj = 0; jj < 3; jj++)
-			{
-				for (int kk = 0; kk < 11; kk++)
-				{
-					output_file.write((char*) &gteams[teamIndex].presets[ii].formations[jj].players[kk].pos, 1);
-				}
-
-				for (int kk = 0; kk < 11; kk++)
-				{
-					//Y/X rather than X/Y strangely
-					output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].y, 1);
-					output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].x, 1);
-				}
-			}
-
-			output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_style, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].buildup, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_zone, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].positioning, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_style, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].containment_area, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].pressure, 1);
-
-			for (int jj = 0; jj < 2; jj++)
-			{
-				output_file.write((char*)&gteams[teamIndex].presets[ii].atk_instructions[jj].instruction, 1);
-				output_file.write((char*)&gteams[teamIndex].presets[ii].atk_instructions[jj].player_id, 1);
-			}
-			for (int jj = 0; jj < 2; jj++)
-			{
-				output_file.write((char*)&gteams[teamIndex].presets[ii].def_instructions[jj].instruction, 1);
-				output_file.write((char*)&gteams[teamIndex].presets[ii].def_instructions[jj].player_id, 1);
-			}
-			output_file.write((char*)&gteams[teamIndex].presets[ii].support_range, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_attack, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_line, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].compactness, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_defense, 1);
-			output_file.write((char*)&gteams[teamIndex].presets[ii].fluid, 1);
-		}
-
-		for (int ii = 0; ii < 11; ii++)
-		{
-			output_file.write((char*)&gteams[teamIndex].starting11[ii], 1);
-		}
-		for (int ii = 0; ii < 21; ii++)
-		{
-			output_file.write((char*)&gteams[teamIndex].bench_order[ii], 1);
-		}
-		output_file.write((char*)&gteams[teamIndex].fk_taker_long, 1);
-		output_file.write((char*)&gteams[teamIndex].fk_taker_short, 1);
-		output_file.write((char*)&gteams[teamIndex].fk_taker_2, 1);
-		output_file.write((char*)&gteams[teamIndex].ck_taker_left, 1);
-		output_file.write((char*)&gteams[teamIndex].ck_taker_right, 1);
-		output_file.write((char*)&gteams[teamIndex].pk_taker, 1);
-		for (int ii = 0; ii < 3; ii++)
-		{
-			output_file.write((char*)&gteams[teamIndex].players_to_join_attack[ii], 1);
-		}
-		output_file.write((char*)&gteams[teamIndex].auto_substitution, 1);
-		output_file.write((char*)&gteams[teamIndex].auto_offside_trap, 1);
-		output_file.write((char*)&gteams[teamIndex].auto_preset_change, 1);
-		output_file.write((char*)&gteams[teamIndex].auto_change_atk_def_levels, 1);
+		save_tactical_data(output_file, teamIndex);
 
 		//Close filestream
 		output_file.close();
@@ -6865,105 +6827,7 @@ void import_nightly(HWND hwnd)
 		{
 			if (gteams[teamIndex].id == teamId)
 			{
-				char c_input[2];
-				for (int ii = 0; ii < 3; ii++)
-				{
-					for (int jj = 0; jj < 3; jj++)
-					{
-						for (int kk = 0; kk < 11; kk++)
-						{
-							input_file.read(c_input, 1);
-							gteams[teamIndex].presets[ii].formations[jj].players[kk].pos = (byte)c_input[0];
-						}
-
-						for (int kk = 0; kk < 11; kk++)
-						{
-							input_file.read(c_input, 1);
-							gteams[teamIndex].presets[ii].formations[jj].players[kk].y = (byte)c_input[0];
-							input_file.read(c_input, 1);
-							gteams[teamIndex].presets[ii].formations[jj].players[kk].x = (byte)c_input[0];
-						}
-					}
-
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].attacking_style = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].buildup = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].attacking_zone = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].positioning = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].defensive_style = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].containment_area = (bool)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].pressure = (bool)c_input[0];
-
-					for (int jj = 0; jj < 2; jj++)
-					{
-						input_file.read(c_input, 1);
-						gteams[teamIndex].presets[ii].atk_instructions[jj].instruction = (byte)c_input[0];
-						input_file.read(c_input, 1);
-						gteams[teamIndex].presets[ii].atk_instructions[jj].player_id = (byte)c_input[0];
-					}
-					for (int jj = 0; jj < 2; jj++)
-					{
-						input_file.read(c_input, 1);
-						gteams[teamIndex].presets[ii].def_instructions[jj].instruction = (byte)c_input[0];
-						input_file.read(c_input, 1);
-						gteams[teamIndex].presets[ii].def_instructions[jj].player_id = (byte)c_input[0];
-					}
-
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].support_range = (byte)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].numbers_in_attack = (byte)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].defensive_line = (byte)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].compactness = (byte)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].numbers_in_defense = (byte)c_input[0];
-					input_file.read(c_input, 1);
-					gteams[teamIndex].presets[ii].fluid = (bool)c_input[0];
-				}
-
-				for (int ii = 0; ii < 11; ii++)
-				{
-					input_file.read(c_input, 1);
-					gteams[teamIndex].starting11[ii] = (int)c_input[0];
-				}
-				for (int ii = 0; ii < 21; ii++)
-				{
-					input_file.read(c_input, 1);
-					gteams[teamIndex].bench_order[ii] = (int)c_input[0];
-				}
-				input_file.read(c_input, 1);
-				gteams[teamIndex].fk_taker_long = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].fk_taker_short = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].fk_taker_2 = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].ck_taker_left = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].ck_taker_right = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].pk_taker = (byte)c_input[0];
-				for (int ii = 0; ii < 3; ii++)
-				{
-					input_file.read(c_input, 1);
-					gteams[teamIndex].players_to_join_attack[ii] = (byte)c_input[0];
-				}
-				input_file.read(c_input, 1);
-				gteams[teamIndex].auto_substitution = (byte)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].auto_offside_trap = (bool)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].auto_preset_change = (bool)c_input[0];
-				input_file.read(c_input, 1);
-				gteams[teamIndex].auto_change_atk_def_levels = (bool)c_input[0];
+				load_tactical_data(input_file, teamIndex);
 				break;
 			}
 
@@ -6980,6 +6844,180 @@ void import_nightly(HWND hwnd)
 		//Close filestream
 		input_file.close();
 	}
+}
+
+void save_tactical_data(std::ofstream& output_file, int teamIndex)
+{
+	char c_output;
+	//Write each preset and formation
+	for (int ii = 0; ii < 3; ii++)
+	{
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				output_file.write((char*) &gteams[teamIndex].presets[ii].formations[jj].players[kk].pos, 1);
+			}
+
+			for (int kk = 0; kk < 11; kk++)
+			{
+				//Y/X rather than X/Y strangely
+				output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].y, 1);
+				output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].x, 1);
+			}
+		}
+
+		output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_style, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].buildup, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_zone, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].positioning, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_style, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].containment_area, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].pressure, 1);
+
+		for (int jj = 0; jj < 2; jj++)
+		{
+			output_file.write((char*)&gteams[teamIndex].presets[ii].atk_instructions[jj].instruction, 1);
+			output_file.write((char*)&gteams[teamIndex].presets[ii].atk_instructions[jj].player_id, 1);
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			output_file.write((char*)&gteams[teamIndex].presets[ii].def_instructions[jj].instruction, 1);
+			output_file.write((char*)&gteams[teamIndex].presets[ii].def_instructions[jj].player_id, 1);
+		}
+		output_file.write((char*)&gteams[teamIndex].presets[ii].support_range, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_attack, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_line, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].compactness, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_defense, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].fluid, 1);
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].starting11[ii], 1);
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].bench_order[ii], 1);
+	}
+	output_file.write((char*)&gteams[teamIndex].fk_taker_long, 1);
+	output_file.write((char*)&gteams[teamIndex].fk_taker_short, 1);
+	output_file.write((char*)&gteams[teamIndex].fk_taker_2, 1);
+	output_file.write((char*)&gteams[teamIndex].ck_taker_left, 1);
+	output_file.write((char*)&gteams[teamIndex].ck_taker_right, 1);
+	output_file.write((char*)&gteams[teamIndex].pk_taker, 1);
+	for (int ii = 0; ii < 3; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].players_to_join_attack[ii], 1);
+	}
+	output_file.write((char*)&gteams[teamIndex].auto_substitution, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_offside_trap, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_preset_change, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_change_atk_def_levels, 1);
+}
+
+void load_tactical_data(std::ifstream& input_file, int teamIndex)
+{
+	char c_input[2];
+	for (int ii = 0; ii < 3; ii++)
+	{
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].pos = (byte)c_input[0];
+			}
+
+			for (int kk = 0; kk < 11; kk++)
+			{
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].y = (byte)c_input[0];
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].x = (byte)c_input[0];
+			}
+		}
+
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].attacking_style = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].buildup = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].attacking_zone = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].positioning = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].defensive_style = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].containment_area = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].pressure = (bool)c_input[0];
+
+		for (int jj = 0; jj < 2; jj++)
+		{
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].atk_instructions[jj].instruction = (byte)c_input[0];
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].atk_instructions[jj].player_id = (byte)c_input[0];
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].def_instructions[jj].instruction = (byte)c_input[0];
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].def_instructions[jj].player_id = (byte)c_input[0];
+		}
+
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].support_range = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].numbers_in_attack = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].defensive_line = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].compactness = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].numbers_in_defense = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].fluid = (bool)c_input[0];
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].starting11[ii] = (int)c_input[0];
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].bench_order[ii] = (int)c_input[0];
+	}
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_long = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_short = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_2 = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].ck_taker_left = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].ck_taker_right = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].pk_taker = (byte)c_input[0];
+	for (int ii = 0; ii < 3; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].players_to_join_attack[ii] = (byte)c_input[0];
+	}
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_substitution = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_offside_trap = (bool)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_preset_change = (bool)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_change_atk_def_levels = (bool)c_input[0];
 }
 
 BOOL CALLBACK bogloDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Set current team's player boots and gloves
