@@ -2733,7 +2733,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Numbers in atk:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+10, y+161, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F28, GetModuleHandle(NULL), NULL);
+		x+10, y+161, 84, 17, ghw_tab4, (HMENU)IDC_STATIC_F28, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
@@ -2820,7 +2820,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Numbers in def:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
-		x+208, y+161, 100, 17, ghw_tab4, (HMENU)IDC_STATIC_F34, GetModuleHandle(NULL), NULL);
+		x+208, y+161, 84, 17, ghw_tab4, (HMENU)IDC_STATIC_F34, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
