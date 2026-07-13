@@ -55,19 +55,19 @@ void setup_main(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("Set Stats to:"), 
 		BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 
-		140, 584, 80, 26, H, (HMENU)IDB_SET_STATS, GetModuleHandle(NULL), NULL);
+		136, 584, 80, 26, H, (HMENU)IDB_SET_STATS, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		230, 585, 40, 23, H, (HMENU)IDT_SET_STATS, GetModuleHandle(NULL), NULL);
+		222, 585, 47, 23, H, (HMENU)IDT_SET_STATS, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, H, (HMENU)IDC_SET_STATS, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
-	SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(99, 40));
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
+	SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(127, 40));
 	SendMessage(hw_new, WM_SETTEXT, 0, (LPARAM)_T("77"));
 
 	//ghw_basic = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_BASIC), H, NULL);
@@ -557,7 +557,7 @@ void setup_tab1(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("Player Skills"), 
 		BS_GROUPBOX | WS_CHILD | WS_VISIBLE | WS_GROUP, 
-		157+11, 5, 144*2+11, 580, ghw_tab1, (HMENU)IDC_STATIC_T19, GetModuleHandle(NULL), NULL);	
+		157+11, 5, 144*2+11, 583, ghw_tab1, (HMENU)IDC_STATIC_T19, GetModuleHandle(NULL), NULL);	
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 	x1=168+11, y1=24, ydiff=20, xc=126+11;
@@ -912,7 +912,7 @@ void setup_tab1(HWND H)
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		323+90, y1+ydiff*23-4, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_WKUS, GetModuleHandle(NULL), NULL);
+		323+90, y1+ydiff*23-4, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_WKUS, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_WKUS, GetModuleHandle(NULL), NULL);
@@ -922,7 +922,7 @@ void setup_tab1(HWND H)
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		323+90, y1+ydiff*24+4, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_WKAC, GetModuleHandle(NULL), NULL);
+		323+90, y1+ydiff*24+4, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_WKAC, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_WKAC, GetModuleHandle(NULL), NULL);
@@ -932,259 +932,259 @@ void setup_tab1(HWND H)
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*0, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_ATKP, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*0, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_ATKP, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_ATKP, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*1, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_BCON, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*1, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_BCON, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_BCON, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*2, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_DRIB, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*2, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_DRIB, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_DRIB, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*3, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_LOWP, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*3, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_LOWP, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_LOWP, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*4, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_LOFT, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*4, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_LOFT, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_LOFT, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*5, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_FINI, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*5, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_FINI, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_FINI, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*6, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_PKIC, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*6, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_PKIC, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_PKIC, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*7, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_SWER, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*7, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_SWER, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_SWER, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*8, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_HEAD, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*8, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_HEAD, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_HEAD, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*9, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_DEFP, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*9, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_DEFP, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_DEFP, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*10, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_BWIN, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*10, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_BWIN, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_BWIN, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*11, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_KPOW, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*11, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_KPOW, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_KPOW, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*12, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_SPED, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*12, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_SPED, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_SPED, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*13, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_EXPL, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*13, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_EXPL, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_EXPL, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*14, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_BODB, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*14, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_BODB, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_BODB, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*15, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_PHCO, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*15, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_PHCO, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_PHCO, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*16, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_JUMP, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*16, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_JUMP, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_JUMP, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*17, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_STAM, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*17, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_STAM, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_STAM, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*18, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_GOAL, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*18, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_GOAL, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_GOAL, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*19, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_CATC, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*19, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_CATC, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_CATC, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*20, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_CLEA, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*20, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_CLEA, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_CLEA, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*21, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_REFL, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*21, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_REFL, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_REFL, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*22, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_COVE, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*22, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_COVE, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_COVE, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	//New for 20+
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*23, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_TIPO, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*23, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_TIPO, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_TIPO, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	hw_new = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), _T(""), 
 		ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP | WS_CHILD | WS_VISIBLE, 
-		x2, y2+ydiff*24, 44, 18, ghw_tab1, (HMENU)IDT_ABIL_AGGR, GetModuleHandle(NULL), NULL);
+		x2, y2+ydiff*24, 47, 18, ghw_tab1, (HMENU)IDT_ABIL_AGGR, GetModuleHandle(NULL), NULL);
 	hw_bud = CreateWindowEx(WS_EX_CLIENTEDGE, _T("msctls_updown32"), _T(""), 
 		UDS_AUTOBUDDY|UDS_SETBUDDYINT|UDS_ALIGNRIGHT|UDS_ARROWKEYS | WS_CHILD | WS_VISIBLE, 
 		0, 0, 0, 0, ghw_tab1, (HMENU)IDC_ABIL_AGGR, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 3, 0);
 
 	for(int ii=IDT_ABIL_ATKP;ii<IDC_ABIL_AGGR;ii++)
 	{
-		SendDlgItemMessage(ghw_tab1, ii+1, UDM_SETRANGE, 0, MAKELPARAM(99, 40));
+		SendDlgItemMessage(ghw_tab1, ii+1, UDM_SETRANGE, 0, MAKELPARAM(127, 40));
 		SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("40"));				
 	}
 	SendDlgItemMessage(ghw_tab1, IDC_ABIL_WKUS, UDM_SETRANGE, 0, MAKELPARAM(4, 1));

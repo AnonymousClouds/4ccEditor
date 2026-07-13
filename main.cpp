@@ -933,20 +933,20 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if(HIWORD(W)==BN_CLICKED)
 					{
-						_itow_s(goldRate, buffer, 3, 10);
+						_itow_s(goldRate, buffer, 4, 10);
 						for(int ii=IDT_ABIL_ATKP;ii<gi_lastAbility;ii+=2)
 							SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(goldForm, buffer, 3, 10);
+						_itow_s(goldForm, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(goldIR, buffer, 3, 10);
+						_itow_s(goldIR, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
 						
-						_itow_s(goldWeakFootUse, buffer, 3, 10);
+						_itow_s(goldWeakFootUse, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(goldWeakFootAcc, buffer, 3, 10);
+						_itow_s(goldWeakFootAcc, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 					}
 				}
@@ -955,20 +955,20 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if(HIWORD(W)==BN_CLICKED)
 					{
-						_itow_s(silverRate, buffer, 3, 10);
+						_itow_s(silverRate, buffer, 4, 10);
 						for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
 							SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(silverForm, buffer, 3, 10);
+						_itow_s(silverForm, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(silverIR, buffer, 3, 10);
+						_itow_s(silverIR, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(silverWeakFootUse, buffer, 3, 10);
+						_itow_s(silverWeakFootUse, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(silverWeakFootAcc, buffer, 3, 10);
+						_itow_s(silverWeakFootAcc, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 					}
 				}
@@ -980,20 +980,20 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
 							//	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
 
-						_itow_s(regRate, buffer, 3, 10);
+						_itow_s(regRate, buffer, 4, 10);
 						for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
 							SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(regForm, buffer, 3, 10);
+						_itow_s(regForm, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(regIR, buffer, 3, 10);
+						_itow_s(regIR, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(regWeakFootUse, buffer, 3, 10);
+						_itow_s(regWeakFootUse, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
 
-						_itow_s(regWeakFootAcc, buffer, 3, 10);
+						_itow_s(regWeakFootAcc, buffer, 4, 10);
 						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 					}
 				}
@@ -1003,8 +1003,8 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					if(HIWORD(W)==BN_CLICKED)
 					{
 						int ii;
-						TCHAR buffer[3];
-						GetDlgItemText(H, IDT_SET_STATS, buffer, 3);
+						TCHAR buffer[4];
+						GetDlgItemText(H, IDT_SET_STATS, buffer,4);
 						for(ii=IDT_ABIL_ATKP;ii<gi_lastAbility;ii+=2)
 						{
 							SetDlgItemText(ghw_tab1, ii, buffer);
@@ -2351,110 +2351,110 @@ void show_player_info(int p_ind)
 			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii),gplayers[p_ind].play_skill[ii]);
 		}
 
-		_itow_s(gplayers[p_ind].atk, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].atk, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].ball_ctrl, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].ball_ctrl, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BCON, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].drib, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].drib, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].lowpass, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].lowpass, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOWP, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].loftpass, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].loftpass, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOFT, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].finish, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].finish, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FINI, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].place_kick, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].place_kick, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_PKIC, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].swerve, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].swerve, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SWER, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].header, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].header, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_HEAD, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].def, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].def, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DEFP, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].ball_win, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].ball_win, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BWIN, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].kick_pwr, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].kick_pwr, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_KPOW, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(gplayers[p_ind].speed, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].speed, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SPED, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].exp_pwr, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].exp_pwr, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_EXPL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].body_ctrl, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].body_ctrl, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BODB, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		if(giPesVersion>16)
 		{
-			_itow_s(gplayers[p_ind].phys_cont, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].phys_cont, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_PHCO, WM_SETTEXT, 0, (LPARAM)buffer);
 		}
 
-		_itow_s(gplayers[p_ind].jump, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].jump, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_JUMP, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].stamina, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].stamina, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_STAM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].gk, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].gk, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_GOAL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].catching, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].catching, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CATC, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		if (giPesVersion > 15)
 		{
-			_itow_s(gplayers[p_ind].clearing, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].clearing, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_CLEA, WM_SETTEXT, 0, (LPARAM)buffer);
 
-			_itow_s(gplayers[p_ind].reflex, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].reflex, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_REFL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-			_itow_s(gplayers[p_ind].cover, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].cover, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_COVE, WM_SETTEXT, 0, (LPARAM)buffer);
 		}
 
 		if(giPesVersion>=20)
 		{
-			_itow_s(gplayers[p_ind].tight_pos, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].tight_pos, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_TIPO, WM_SETTEXT, 0, (LPARAM)buffer);
 
-			_itow_s(gplayers[p_ind].aggres, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].aggres, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_AGGR, WM_SETTEXT, 0, (LPARAM)buffer);
 		}
 
-		_itow_s(gplayers[p_ind].weak_use + 1, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].weak_use + 1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].weak_acc + 1, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].weak_acc + 1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].form + 1, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].form + 1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(gplayers[p_ind].injury + 1, buffer, 3, 10);
+		_itow_s(gplayers[p_ind].injury + 1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		if(giPesVersion>=19)
 		{
-			_itow_s(gplayers[p_ind].star, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].star, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab2, IDT_STAR, WM_SETTEXT, 0, (LPARAM)buffer);
 		}
 		if(giPesVersion>=20)
 		{
-			_itow_s(gplayers[p_ind].play_attit, buffer, 3, 10);
+			_itow_s(gplayers[p_ind].play_attit, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab2, IDT_PLAY_ATT, WM_SETTEXT, 0, (LPARAM)buffer);
 		}
 
@@ -2669,107 +2669,107 @@ void show_player_info(int p_ind)
 			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii),0);
 		}
 		int blank_val = 40;
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BCON, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOWP, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOFT, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FINI, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_PKIC, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SWER, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_HEAD, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DEFP, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BWIN, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_KPOW, WM_SETTEXT, 0, (LPARAM)buffer);	
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SPED, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_EXPL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BODB, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		//if(giPesVersion > 16)
 		//{
-			_itow_s(blank_val, buffer, 3, 10);
+			_itow_s(blank_val, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_PHCO, WM_SETTEXT, 0, (LPARAM)buffer);
 		//}
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_JUMP, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_STAM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_GOAL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CATC, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CLEA, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_REFL, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(blank_val, buffer, 3, 10);
+		_itow_s(blank_val, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_COVE, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		//if(giPesVersion>=20)
 		//{
-			_itow_s(blank_val, buffer, 3, 10);
+			_itow_s(blank_val, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_TIPO, WM_SETTEXT, 0, (LPARAM)buffer);
 
-			_itow_s(blank_val, buffer, 3, 10);
+			_itow_s(blank_val, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab1, IDT_ABIL_AGGR, WM_SETTEXT, 0, (LPARAM)buffer);
 		//}
 
-		_itow_s(1, buffer, 3, 10);
+		_itow_s(1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(1, buffer, 3, 10);
+		_itow_s(1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(1, buffer, 3, 10);
+		_itow_s(1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
 
-		_itow_s(1, buffer, 3, 10);
+		_itow_s(1, buffer, 4, 10);
 		SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
 
 		//if(giPesVersion>=19)
 		//{
-			_itow_s(0, buffer, 3, 10);
+			_itow_s(0, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab2, IDT_STAR, WM_SETTEXT, 0, (LPARAM)buffer);
 		//}
 		//if(giPesVersion>=20)
 		//{
-			_itow_s(0, buffer, 3, 10);
+			_itow_s(0, buffer, 4, 10);
 			SendDlgItemMessage(ghw_tab2, IDT_PLAY_ATT, WM_SETTEXT, 0, (LPARAM)buffer);
 		//}
 
@@ -5797,7 +5797,7 @@ BOOL CALLBACK bumpDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 			SendDlgItemMessage(hwnd, IDC_STAT, UDM_SETRANGE, 0, MAKELPARAM(10, -10));
 
 			//GetDlgItemText(ghw_tab1, IDT_ABIL_ATKP, buffer, 3);
-			_itow_s(g_bumpAmount, buffer, 3, 10);
+			_itow_s(g_bumpAmount, buffer, 4, 10);
 			SetDlgItemText(hwnd, IDT_STAT, buffer);
 
 			SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
@@ -5821,7 +5821,7 @@ BOOL CALLBACK bumpDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 						new_stat = cur_stat + change;
 						if(new_stat>99) new_stat = 99;
 						if(new_stat<40) new_stat = 40;
-						_itow_s(new_stat, buffer, 3, 10);
+						_itow_s(new_stat, buffer, 4, 10);
 						SetDlgItemText(ghw_tab1, ii, buffer);
 					}
 					g_bumpAmount = change; 
