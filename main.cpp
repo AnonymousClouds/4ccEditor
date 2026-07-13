@@ -6828,6 +6828,7 @@ void import_nightly(HWND hwnd)
 			if (gteams[teamIndex].id == teamId)
 			{
 				load_tactical_data(input_file, teamIndex);
+				gteams[teamIndex].b_changed = true;
 				break;
 			}
 
