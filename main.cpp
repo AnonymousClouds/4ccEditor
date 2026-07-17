@@ -45,8 +45,6 @@ void player_names_to_positions();
 
 void export_squad(HWND);
 void import_squad(HWND);
-void export_nightly(HWND);
-void import_nightly(HWND);
 
 void save_tactical_data(std::ofstream&, int);
 void load_tactical_data(std::ifstream&, int);
@@ -817,11 +815,6 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					if(gn_teamsel > -1) import_squad(H);
 					else MessageBox(H,_T("Please select a team to overwrite."),NULL,MB_ICONWARNING);
 				break;
-				case IDM_TACT_NIGHTS:
-					if (gn_teamsel > -1) export_nightly(H);
-					else MessageBox(H, _T("Please select a team to be saved."), NULL, MB_ICONWARNING);
-				case IDM_TACT_NIGHTL:
-					import_nightly(H);
 				case IDM_DATA_OUTPUT:
 					if(gplayers) roster_data_output();
 				break;
@@ -6691,156 +6684,6 @@ void import_squad(HWND hwnd)
 			ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, false);
 			ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);
 			//Fix this: update view to show info on first item in list, as it's been selected
-		}
-
-		//Close filestream
-		input_file.close();
-	}
-}
-
-void export_nightly(HWND hwnd)
-{
-	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
-	int ii, csel, teamIndex;
-
-	if (gb_tactics_enabled != TRUE)
-		return;
-
-	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
-	teamIndex = gn_teamCbIndToArray[csel];
-
-	//Dialog to get out_file path
-	OPENFILENAME ofn;
-	TCHAR outPath[MAX_PATH] = _T("");
-	char defName[20];
-	strcpy(defName, gteams[teamIndex].short_name);
-	strcat(defName, " nightly.4ccn");
-	_tcscpy(outPath, A2T(defName));
-
-	ii=0;
-	const char* invalid_characters = "<>:\"/\\|?*";
-	while ((int)defName[ii]>0 && ii<10)
-	{
-		if ((int)(defName[ii])<32 || strchr(invalid_characters, defName[ii]))
-		{
-			_tcscpy(outPath, _T("nightly.4ccn"));
-			break;
-		}
-		ii++;
-	}
-
-	ZeroMemory(&ofn, sizeof(ofn));
-
-	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = hwnd;
-	ofn.lpstrFile = (LPTSTR)outPath;
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-	ofn.lpstrTitle = _T("Save nightly");
-
-	if (GetSaveFileName(&ofn))
-	{
-
-		//strcpy(outPath, T2A(tOutPath));
-		//Open file stream
-		std::ofstream output_file(outPath, std::ios::binary);
-
-		//Write out 4CCS version number to allow compatibility checks
-		output_file.write(gc_ver4ccn, 3);
-
-		//Write out PES version we're exporting from
-		char cPesVersion[3];
-		_itoa_s(giPesVersion, cPesVersion, 3, 10);
-		output_file.write(cPesVersion, 2);
-
-		//Write out the team ID
-		char cTeamId[8];
-		_ltoa_s(gteams[teamIndex].id, cTeamId, 8, 10);
-		output_file.write(cTeamId, 8);
-
-		save_tactical_data(output_file, teamIndex);
-
-		//Close filestream
-		output_file.close();
-	}
-}
-
-void import_nightly(HWND hwnd)
-{
-	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
-	int ii, jj, kk;
-
-	if (!(giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18))
-		return;
-
-	//Dialog to get out_file path
-	OPENFILENAME ofn;
-	TCHAR inPath[MAX_PATH] = _T("");
-
-	ZeroMemory(&ofn, sizeof(ofn));
-
-	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = hwnd;
-	ofn.lpstrFile = (LPTSTR)inPath;
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-	ofn.lpstrTitle = _T("Import nightly");
-
-	if (GetOpenFileName(&ofn))
-	{
-		std::ifstream input_file;
-
-		input_file.open(inPath, std::ios::binary);
-
-		//Check for  version compatibility
-		char cFileVersion[4];
-		input_file.read(cFileVersion, 3);
-		cFileVersion[3] = '\0';
-		if (strcmp(cFileVersion, gc_ver4ccn) != 0)
-		{
-			TCHAR message[200];
-			_stprintf(message, _T("Invalid 4CCN file!\r\nPlease save a 4CCN for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4ccn));
-			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
-			input_file.close();
-			return;
-		}
-		//Get version this was imported from
-		char c_pesVer[3];
-		int pesVer;
-		input_file.read(c_pesVer, 2);
-		c_pesVer[2] = '\0';
-		pesVer = atoi(c_pesVer);
-		if (pesVer != giPesVersion)
-		{
-			TCHAR message[200];
-			_stprintf(message, _T("This nightly is from a different version of PES than the currently loaded EDIT file!\r\nPES Version: %"), c_pesVer);
-			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
-			input_file.close();
-			return;
-		}
-
-		//Read the team ID
-		char c_teamId[9];
-		input_file.read(c_teamId, 8);
-		c_teamId[8] = '\0';
-		int teamId = atoi(c_teamId);
-		for (int teamIndex = 0; teamIndex < gnum_teams; teamIndex++)
-		{
-			if (gteams[teamIndex].id == teamId)
-			{
-				load_tactical_data(input_file, teamIndex);
-				gteams[teamIndex].b_changed = true;
-				break;
-			}
-
-			if (teamIndex == gnum_teams - 1)
-			{
-				TCHAR message[200];
-				_stprintf(message, _T("The specified team ID does not exist in the current EDIT file"), teamId);
-				MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
-				input_file.close();
-				return;
-			}
 		}
 
 		//Close filestream
