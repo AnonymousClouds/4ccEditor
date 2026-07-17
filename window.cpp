@@ -2852,29 +2852,6 @@ void setup_tab4(HWND H)
 		x+468, y+35, 90, 100, ghw_tab4, (HMENU)IDC_TACT_AIA1, GetModuleHandle(NULL), NULL);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
 	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x00);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
-	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x01);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
-	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x02);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x03);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x04);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
-	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x05);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
-	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x06);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
-	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x07);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
-	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x08);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
-	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x09);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
-	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0A);
-	//Tight Marking is not allowed here
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
-	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0C);
 	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
 	setup_combo(hw_new, ghFont, cb2_cntl_proc);
 
@@ -2896,29 +2873,6 @@ void setup_tab4(HWND H)
 		x+468, y+63, 90, 100, ghw_tab4, (HMENU)IDC_TACT_AIA2, GetModuleHandle(NULL), NULL);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
 	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x00);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
-	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x01);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
-	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x02);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x03);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x04);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
-	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x05);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
-	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x06);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
-	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x07);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
-	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x08);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
-	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x09);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
-	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0A);
-	//Tight Marking is not allowed here
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
-	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0C);
 	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
 	setup_combo(hw_new, ghFont, cb2_cntl_proc);
 
@@ -2940,29 +2894,6 @@ void setup_tab4(HWND H)
 		x+468, y+91, 90, 100, ghw_tab4, (HMENU)IDC_TACT_AID1, GetModuleHandle(NULL), NULL);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
 	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x00);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
-	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x01);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
-	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x02);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x03);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x04);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
-	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x05);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
-	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x06);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
-	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x07);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
-	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x08);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
-	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x09);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
-	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0A);
-	//Tight Marking is not allowed here
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
-	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0C);
 	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
 	setup_combo(hw_new, ghFont, cb2_cntl_proc);
 
@@ -2984,29 +2915,6 @@ void setup_tab4(HWND H)
 		x+468, y+119, 90, 100, ghw_tab4, (HMENU)IDC_TACT_AID2, GetModuleHandle(NULL), NULL);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
 	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x00);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
-	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x01);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
-	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x02);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x03);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
-	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x04);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
-	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x05);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
-	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x06);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
-	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x07);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
-	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x08);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
-	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x09);
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
-	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0A);
-	//Tight Marking is not allowed here
-	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
-	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0C);
 	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
 	setup_combo(hw_new, ghFont, cb2_cntl_proc);
 

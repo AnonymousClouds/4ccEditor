@@ -613,6 +613,7 @@ struct formation_entry
 };
 
 struct advanced_instruction {
+	//17
 	//0x00 - OFF
 	//0x01 - Hug the Touchline
 	//0x02 - False No. 9
@@ -625,7 +626,25 @@ struct advanced_instruction {
 	//0x09 - Deep Defensive Line
 	//0x0A - Gegenpress
 	//0x0B - Tight Marking (Invalid in edit mode, should not be allowed to be selected by the editor)
-	//0x0C - Counter Target
+	//0x0C - Counter Target (Has targetted player)
+
+	//18
+	//0x00 - OFF
+	//0x01 - Hug the Touchline
+	//0x02 - False No. 9
+	//0x03 - False Full Backs
+	//0x04 - Attacking Full Backs
+	//0x05 - Wing Rotation
+	//0x06 - Tiki-Taka
+	//0x07 - Centering Targets
+	//0x08 - Defensive (Has targetted player)
+	//0x09 - False Winger
+	//0x0A - Swarm the Box
+	//0x0B - Deep Defensive Line
+	//0x0C - Gegenpress
+	//0x0D - Tight Marking (Invalid in edit mode, should not be allowed to be selected by the editor)
+	//0x0E - Counter Target (Has targetted player)
+	//0x0F - Wingback
 	char instruction;
 	char player_id;
 	//Constructor
