@@ -3642,7 +3642,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 				int x_range = -1, y_range = -1;
 				double width = 260.0, height = 350.0;
-				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				{
 					x_range = 0x68;
 					y_range = 0x30;
@@ -3702,7 +3702,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 				int x_range = -1, y_range = -1;
 				double width = 260.0, height = 350.0;
-				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				{
 					x_range = 0x68;
 					y_range = 0x30;
@@ -4699,7 +4699,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 								if (giPesVersion == 17)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), val == 0x0C); //Counter Target
-								else if (giPesVersion == 18 || giPesVersion == 19)
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL));
 							}
@@ -4729,7 +4729,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 								if (giPesVersion == 17)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), val == 0x0C); //Counter Target
-								else if (giPesVersion == 18 || giPesVersion == 19)
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL));
 							}
@@ -4759,7 +4759,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 								if (giPesVersion == 17)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), val == 0x0C); //Counter Target
-								else if (giPesVersion == 18 || giPesVersion == 19)
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL));
 							}
@@ -4789,7 +4789,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 								if (giPesVersion == 17)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), val == 0x0C); //Counter Target
-								else if (giPesVersion == 18 || giPesVersion == 19)
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL));
 							}
@@ -6673,7 +6673,7 @@ void import_squad(HWND hwnd)
 				}
 			}
 
-			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19))
+			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21))
 			{
 				for (int teamIndex = 0; teamIndex < gnum_teams; teamIndex++)
 				{
@@ -6783,9 +6783,9 @@ void load_tactical_data(std::ifstream& input_file, int teamIndex, int pesVersion
 {
 	//Figure out the conversion factor for the X/Y coords since they can vary between versions
 	double x_conversion = 1.0, y_conversion = 1.0;
-	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 	{
-		if (pesVersion == 16 || pesVersion == 17 || pesVersion == 18 || giPesVersion == 19)
+		if (pesVersion == 16 || pesVersion == 17 || pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21)
 		{
 			//Do nothing, its 1-to-1
 		}
@@ -6959,7 +6959,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Swarm The Box
 				return 0x08;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Defensive Player
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Defensive Player
 				return 0x0D;
 		}
 		break;
@@ -6968,7 +6968,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Deep Defensive Line
 				return 0x09;
-			else if (giPesVersion == 18 || giPesVersion == 19) //False Winger
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //False Winger
 				return 0x0E;
 		}
 		break;
@@ -6977,7 +6977,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Gegenpress
 				return 0x0A;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Swarm the Box
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Swarm the Box
 				return 0x08;
 		}
 		break;
@@ -6986,7 +6986,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Tight Marking
 				return 0x0B;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Deep Defensive Line
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Deep Defensive Line
 				return 0x09;
 		}
 		break;
@@ -6995,7 +6995,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Counter Target
 				return 0x0C;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Gegenpress
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Gegenpress
 				return 0x0A;
 		}
 		break;
@@ -7004,7 +7004,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Invalid
 				return 0x00;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Tight Marking
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Tight Marking
 				return 0x0B;
 		}
 		break;
@@ -7013,7 +7013,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Invalid
 				return 0x00;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Counter Target
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Counter Target
 				return 0x0C;
 		}
 		break;
@@ -7022,7 +7022,7 @@ byte translate_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17) //Invalid
 				return 0x00;
-			else if (giPesVersion == 18 || giPesVersion == 19) //Wing Back
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21) //Wing Back
 				return 0x0F;
 		}
 		break;
@@ -7060,28 +7060,28 @@ byte get_translated_adv_instruction(byte instruction)
 		{
 			if (giPesVersion == 17)
 				return instruction;
-			else if (giPesVersion == 18 || giPesVersion == 19)
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				return instruction + 0x02; //Offset by 2 bytes
 		}
 		break;
 
 		case 0x0D: //Defensive Player
 		{
-			if (giPesVersion == 18 || giPesVersion == 19)
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				return 0x08;
 		}
 		break;
 
 		case 0x0E: //False Winger
 		{
-			if (giPesVersion == 18 || giPesVersion == 19)
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				return 0x09;
 		}
 		break;
 
 		case 0x0F: //Wing Back
 		{
-			if (giPesVersion == 18 || giPesVersion == 19)
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				return 0x0F;
 		}
 		break;
@@ -7411,7 +7411,7 @@ void toggle_tactics(bool b_enable)
 //Initialized the tactics tab for a given team
 void init_tactics_tab()
 {
-	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 	{
 		if (!gb_tactics_enabled)
 			toggle_tactics(TRUE);
@@ -7436,7 +7436,7 @@ void init_tactics_tab()
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_RESETCONTENT, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_RESETCONTENT, 0, 0);
 
-		if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+		if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 		{
 			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1, CB_RESETCONTENT, 0, 0);
 			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_RESETCONTENT, 0, 0);
@@ -7487,7 +7487,7 @@ void init_tactics_tab()
 					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETCURSEL, (WPARAM)0, 0);
 				}
 			}
-			else if (giPesVersion == 18 || giPesVersion == 19)
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 			{
 				for (int ii = 0; ii < 4; ii++)
 				{
@@ -7575,7 +7575,7 @@ void init_tactics_tab()
 					if (i_ptj3 == 11 && gteams[gn_teamsel].players_to_join_attack[2] == playerId)
 						i_ptj3 = ii;
 
-					if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+					if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 					{
 						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
 						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETITEMDATA, ii + 1, playerId);
@@ -7668,7 +7668,7 @@ void init_tactics_tab()
 			SetDlgItemText(ghw_tab4, IDC_STATIC_F28, L"Numbers in atk:");
 			SetDlgItemText(ghw_tab4, IDC_STATIC_F28, L"Numbers in def:");
 		}
-		else if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+		else if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 		{
 			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1), TRUE);
 			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1));
@@ -7745,7 +7745,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 					UpdateWindow(GetDlgItem(ghw_tab4, windowId));
 					if (giPesVersion == 17)
 						enablePlayerSelect = instruction == 0x0C; //Counter Target
-					else if (giPesVersion == 18 || giPesVersion == 19)
+					else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 						enablePlayerSelect = instruction == 0x08 || instruction == 0x0E; //Counter Target or Defensive
 
 					if (!populatePlayers && enablePlayerSelect)
@@ -7759,7 +7759,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 		}
 
 		int player_indexes[4] { 0, 0, 0, 0};
-		if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+		if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 		{
 			for (ii = 0; ii < 11; ii++)
 			{
@@ -7794,7 +7794,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 
 							if (giPesVersion == 17)
 								enablePlayerSelect = instruction == 0x0C; //Counter Target
-							else if (giPesVersion == 18 || giPesVersion == 19)
+							else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 								enablePlayerSelect = instruction == 0x08 || instruction == 0x0E; //Counter Target or Defensive
 
 							if (!enablePlayerSelect)
@@ -7845,7 +7845,7 @@ void set_player_xy(int index, int player_id, byte pos, byte player_x, byte playe
 	int label_size_x = 60, label_size_y = 17, button_size_x = 52, button_size_y = 17;
 	//Add 5 pixels of padding on all sides
 	int box_x = 217 + 5, box_y = 5 + 15, box_width = 260, box_height = 350;
-	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19)
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 	{
 		//If gk force X and Y to 52 and 3 if they aren't for visual consistency, since the game will already do that upon match start
 		if (pos == 0x00)
