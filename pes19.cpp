@@ -422,19 +422,85 @@ void fill_team_tactics19(int &current_byte, void* ghdescriptor, team_entry* gtea
 	{
 		if(team_id == gteams[t_ind].id) break;
 	}
-	//current_byte+=0x209;
-	current_byte+=0x1E0;
 
-	//Starting lineup
-	for(int ii=0; ii<11; ii++)
+	for (int ii = 0; ii < 3; ii++)
 	{
-		gteams[t_ind].starting11[ii] = pDescriptorNew->data[current_byte];
-		current_byte++;
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				gteams[t_ind].presets[ii].formations[jj].players[kk].pos = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			}
+
+			for (int kk = 0; kk < 11; kk++)
+			{
+				//Y/X rather than X/Y strangely
+				gteams[t_ind].presets[ii].formations[jj].players[kk].y = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+				gteams[t_ind].presets[ii].formations[jj].players[kk].x = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			}
+		}
+
+		gteams[t_ind].presets[ii].attacking_style = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].buildup = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].attacking_zone = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].positioning = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].defensive_style = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].containment_area = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].pressure = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+
+		current_byte+=0x2;
+		for (int jj = 0; jj < 2; jj++)
+		{
+			gteams[t_ind].presets[ii].atk_instructions[jj].instruction = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+			gteams[t_ind].presets[ii].atk_instructions[jj].player_id = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			gteams[t_ind].presets[ii].def_instructions[jj].instruction = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+			gteams[t_ind].presets[ii].def_instructions[jj].player_id = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+		}
+
+		gteams[t_ind].presets[ii].support_range = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].numbers_in_attack = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].defensive_line = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].compactness = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		gteams[t_ind].presets[ii].numbers_in_defense = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		current_byte+=0xB; //Man Marking data, useless for the save file
+		gteams[t_ind].presets[ii].fluid = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+		current_byte+=0x3;
 	}
-	current_byte+=0x26;
-	//Captain index at byte 0x215:
-	gteams[t_ind].captain_ind = (char)pDescriptorNew->data[current_byte];
-	current_byte+=0x5f;
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		gteams[t_ind].starting11[ii] = read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		gteams[t_ind].bench_order[ii] = read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	current_byte+=0x8; //There are technically 29 bench players, but literally nothing references the last 8
+	gteams[t_ind].fk_taker_long = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].fk_taker_short = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].fk_taker_2 = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].ck_taker_left = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].ck_taker_right = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].pk_taker = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	for (int ii = 0; ii < 3; ii++)
+	{
+		gteams[t_ind].players_to_join_attack[ii] = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	gteams[t_ind].captain_ind = (char)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].auto_substitution = (byte)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].auto_offside_trap = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	gteams[t_ind].auto_preset_change = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	current_byte+=0x1; //Switch Preset Tactics. For some unknown reason, they've starting storing it on a team level instead of a global level.
+	gteams[t_ind].auto_change_atk_def_levels = (bool)read_data(0, 1 * 8, current_byte, pDescriptorNew);
+	current_byte+=0x1; //Auto Lineup Select, no reason for us to use that
+	current_byte+=0x58; //Skip unknown byte plus padding
 }
 
 //---------------------------------------------------------------------------------------------------------
@@ -843,7 +909,7 @@ void extract_team_tactics19(team_entry team, int &current_byte, void* ghdescript
 	{
 		current_byte += 0x274;
 		return;
-	}
+	}	
 	
 	pDescriptorNew->data[current_byte] = team.id & 255; //8/32
 	current_byte++;
@@ -854,8 +920,82 @@ void extract_team_tactics19(team_entry team, int &current_byte, void* ghdescript
 	pDescriptorNew->data[current_byte] = (team.id >> 24) & 255; //8/32
 	current_byte++;
 	
-	current_byte+=0x211;
-	pDescriptorNew->data[current_byte] = team.captain_ind;
+	for (int ii = 0; ii < 3; ii++)
+	{
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				write_data(team.presets[ii].formations[jj].players[kk].pos, 0, 1 * 8, current_byte, pDescriptorNew);
+			}
 
-	current_byte+=0x5f;
+			for (int kk = 0; kk < 11; kk++)
+			{
+				//Y/X rather than X/Y strangely
+				write_data(team.presets[ii].formations[jj].players[kk].y, 0, 1 * 8, current_byte, pDescriptorNew);
+				write_data(team.presets[ii].formations[jj].players[kk].x, 0, 1 * 8, current_byte, pDescriptorNew);
+			}
+		}
+
+		write_data(team.presets[ii].attacking_style, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].buildup, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].attacking_zone, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].positioning, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].defensive_style, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].containment_area, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].pressure, 0, 1 * 8, current_byte, pDescriptorNew);
+
+		current_byte+=0x2;
+		for (int jj = 0; jj < 2; jj++)
+		{
+			write_data(team.presets[ii].atk_instructions[jj].instruction, 0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+			write_data(team.presets[ii].atk_instructions[jj].player_id, 0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			write_data(team.presets[ii].def_instructions[jj].instruction, 0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+			write_data(team.presets[ii].def_instructions[jj].player_id, 0, 1 * 8, current_byte, pDescriptorNew);
+			current_byte+=0x3;
+		}
+
+		write_data(team.presets[ii].support_range, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].numbers_in_attack, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].defensive_line, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].compactness, 0, 1 * 8, current_byte, pDescriptorNew);
+		write_data(team.presets[ii].numbers_in_defense, 0, 1 * 8, current_byte, pDescriptorNew);
+		current_byte+=0xB; //Man Marking data, useless for the save file
+		write_data(team.presets[ii].fluid, 0, 1 * 8, current_byte, pDescriptorNew);
+		current_byte+=0x3;
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		write_data(team.starting11[ii], 0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		write_data(team.bench_order[ii], 0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	current_byte+=0x8; //There are technically 29 bench players, but literally nothing references the last 8
+	write_data(team.fk_taker_long, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.fk_taker_short, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.fk_taker_2, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.ck_taker_left, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.ck_taker_right, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.pk_taker, 0, 1 * 8, current_byte, pDescriptorNew);
+	for (int ii = 0; ii < 3; ii++)
+	{
+		write_data(team.players_to_join_attack[ii], 0, 1 * 8, current_byte, pDescriptorNew);
+	}
+	write_data(team.captain_ind, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.auto_substitution, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.auto_offside_trap, 0, 1 * 8, current_byte, pDescriptorNew);
+	write_data(team.auto_preset_change, 0, 1 * 8, current_byte, pDescriptorNew);
+	current_byte+=0x1; //Switch Preset Tactics. For some unknown reason, they've starting storing it on a team level instead of a global level.
+	write_data(team.auto_change_atk_def_levels, 0, 1 * 8, current_byte, pDescriptorNew);
+	current_byte+=0x1; //Auto Lineup Select, no reason for us to use that
+	current_byte+=0x58; //Skip unknown byte plus padding
 }
