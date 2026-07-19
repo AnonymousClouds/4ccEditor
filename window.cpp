@@ -2550,7 +2550,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 1"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+21, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN1, GetModuleHandle(NULL), NULL);
+		x+67, y+21, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN1, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("CB"),
@@ -2560,7 +2560,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 2"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+41, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN2, GetModuleHandle(NULL), NULL);
+		x+67, y+41, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN2, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("LB"),
@@ -2570,7 +2570,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 3"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+61, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN3, GetModuleHandle(NULL), NULL);
+		x+67, y+61, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN3, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("RB"),
@@ -2580,7 +2580,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 4"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+81, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN4, GetModuleHandle(NULL), NULL);
+		x+67, y+81, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN4, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("DMF"),
@@ -2590,7 +2590,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 5"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+101, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN5, GetModuleHandle(NULL), NULL);
+		x+67, y+101, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN5, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("CMF"),
@@ -2600,7 +2600,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 6"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+121, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN6, GetModuleHandle(NULL), NULL);
+		x+67, y+121, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN6, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("LMF"),
@@ -2610,7 +2610,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 7"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+141, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN7, GetModuleHandle(NULL), NULL);
+		x+67, y+141, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN7, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("RMF"),
@@ -2620,7 +2620,7 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 8"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+161, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN8, GetModuleHandle(NULL), NULL);
+		x+67, y+161, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN8, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Button"), _T("AMF"),
@@ -2630,28 +2630,48 @@ void setup_tab4(HWND H)
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 9"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+181, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN9, GetModuleHandle(NULL), NULL);
+		x+67, y+181, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN9, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
-	hw_new = CreateWindowEx(0, _T("Button"), _T("SS"),
+	hw_new = CreateWindowEx(0, _T("Button"), _T("LWF"),
 		BS_PUSHBUTTON | BS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
 		x+10, y+200, 51, 17, ghw_tab4, (HMENU)IDB_TACT_BN10, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 10"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+201, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN10, GetModuleHandle(NULL), NULL);
+		x+67, y+201, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN10, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
-	hw_new = CreateWindowEx(0, _T("Button"), _T("CF"),
+	hw_new = CreateWindowEx(0, _T("Button"), _T("RWF"),
 		BS_PUSHBUTTON | BS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
 		x+10, y+220, 51, 17, ghw_tab4, (HMENU)IDB_TACT_BN11, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 11"),
 		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
-		x+67, y+221, 106, 17, ghw_tab4, (HMENU)IDC_STATIC_BN11, GetModuleHandle(NULL), NULL);
+		x+67, y+221, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN11, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_static_proc);
+
+	hw_new = CreateWindowEx(0, _T("Button"), _T("SS"),
+		BS_PUSHBUTTON | BS_OWNERDRAW | WS_CHILD | WS_VISIBLE,
+		x+10, y+240, 51, 17, ghw_tab4, (HMENU)IDB_TACT_BN12, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_static_proc);
+
+	hw_new = CreateWindowEx(0, _T("Static"), _T("Backup 12"),
+		SS_NOTIFY | SS_OWNERDRAW | SS_NOPREFIX | WS_CHILD | WS_VISIBLE | WS_GROUP,
+		x+67, y+241, 280, 17, ghw_tab4, (HMENU)IDC_STATIC_BN12, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_static_proc);
+
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Move Up"),
+		BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+		x+8, y+337, 80, 25, ghw_tab4, (HMENU)IDB_TACT_BNMVUP, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
+
+	hw_new = CreateWindowEx(0, _T("Button"), _T("Move Down"),
+		BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+		x+94, y+337, 80, 25, ghw_tab4, (HMENU)IDB_TACT_BNMVDN, GetModuleHandle(NULL), NULL);
+	setup_control(hw_new, ghFont, scale_cntl_proc);
 
 
 	//Formation Settings

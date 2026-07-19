@@ -4337,6 +4337,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					case IDB_TACT_BN9:
 					case IDB_TACT_BN10:
 					case IDB_TACT_BN11:
+					case IDB_TACT_BN12:
 					{
 						HDC hdc = lpdis->hDC;
 						RECT rc = lpdis->rcItem;
@@ -5144,6 +5145,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						case IDB_TACT_BN9:
 						case IDB_TACT_BN10:
 						case IDB_TACT_BN11:
+						case IDB_TACT_BN12:
 						case IDC_STATIC_BN1:
 						case IDC_STATIC_BN2:
 						case IDC_STATIC_BN3:
@@ -5155,6 +5157,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						case IDC_STATIC_BN9:
 						case IDC_STATIC_BN10:
 						case IDC_STATIC_BN11:
+						case IDC_STATIC_BN12:
 						{
 							gb_updating_tactics = true;
 							if (gb_tactics_enabled)
@@ -5173,20 +5176,77 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
 									}
 									gi_selected_player_bench = player_index;
+
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), player_index != 0);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), player_index != 11);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
 								}
 								else
 								{
 									gi_selected_player_bench = -1;
 									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
 									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), FALSE);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), FALSE);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
 								}
 
-								RECT rectLineup = create_rect(497, 5, 183, 370);
+								RECT rectLineup = create_rect(497, 5, 380, 320);
 								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE);
 							}
 							gb_updating_tactics = false;
 						}
 						break;
+
+						case IDB_TACT_BNMVUP:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled && gi_selected_player_bench > 0)
+							{
+								int playerId = gteams[gn_teamsel].bench_order[gi_selected_player_bench - 1];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench - 1] = gteams[gn_teamsel].bench_order[gi_selected_player_bench];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench] = playerId;
+								gi_selected_player_bench--;
+								update_backline(teamOffset);
+
+								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
+
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), gi_selected_player_bench != 11);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+							}
+
+							gb_updating_tactics = false;
+						}
+						break;
+
+						case IDB_TACT_BNMVDN:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled && gi_selected_player_bench != -1 && gi_selected_player_bench != 11)
+							{
+								int playerId = gteams[gn_teamsel].bench_order[gi_selected_player_bench + 1];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench + 1] = gteams[gn_teamsel].bench_order[gi_selected_player_bench];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench] = playerId;
+								gi_selected_player_bench++;
+								update_backline(teamOffset);
+
+								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
+
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), gi_selected_player_bench != 11);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+							}
+							gb_updating_tactics = false;
+						}
+						break;
+
 						default:
 							break;
 					}
@@ -7389,6 +7449,12 @@ void toggle_tactics(bool b_enable)
 	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN10));
 	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11), b_enable);
 	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN12), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN12));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
 	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1), FALSE);
 	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1));
 	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), FALSE);
@@ -7830,7 +7896,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 	RECT rectFormation = create_rect(217, 5, 270, 370);
 	RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
-	RECT rectLineup = create_rect(497, 5, 183, 370);
+	RECT rectLineup = create_rect(497, 5, 383, 370);
 	RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 	gi_preset = preset;
@@ -7947,7 +8013,7 @@ void update_backline(int teamOffset)
 	int label_size_x = 106, label_size_y = 17, button_size_x = 52, button_size_y = 17;
 	LPWSTR name;
 	LPWSTR position_name;
-	for (int ii = 0; ii < 11; ii++)
+	for (int ii = 0; ii < 12; ii++)
 	{
 		int player_id = teamOffset + gteams[gn_teamsel].bench_order[ii];
 		for (int jj = 0; jj < gnum_players; jj++)
