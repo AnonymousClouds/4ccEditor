@@ -7897,7 +7897,7 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 	RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 	RECT rectLineup = create_rect(497, 5, 383, 370);
-	RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE);
+	RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
 
 	gi_preset = preset;
 	gi_formation = formation;
