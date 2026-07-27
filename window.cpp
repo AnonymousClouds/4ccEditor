@@ -2747,7 +2747,7 @@ void setup_tab4(HWND H)
 		0, 0, 0, 0, ghw_tab4, (HMENU)IDC_SET_STATS, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 1, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
 	SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(0x0A, 0x01));
 	SendMessage(hw_new, WM_SETTEXT, 0, (LPARAM)_T("1"));
 
@@ -2817,7 +2817,7 @@ void setup_tab4(HWND H)
 		0, 0, 0, 0, ghw_tab4, (HMENU)IDC_TACT_STATS, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 1, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
 	SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(0x0A, 0x01));
 	SendMessage(hw_new, WM_SETTEXT, 0, (LPARAM)_T("1"));
 
@@ -2834,7 +2834,7 @@ void setup_tab4(HWND H)
 		0, 0, 0, 0, ghw_tab4, (HMENU)IDC_SET_STATS, GetModuleHandle(NULL), NULL);
 	setup_control(hw_new, ghFont, scale_cntl_proc);
 	setup_control(hw_bud, ghFont, scale_cntl_proc);
-	SendMessage(hw_new, EM_SETLIMITTEXT, 1, 0);
+	SendMessage(hw_new, EM_SETLIMITTEXT, 2, 0);
 	SendMessage(hw_bud, UDM_SETRANGE, 0, MAKELPARAM(0x0A, 0x01));
 	SendMessage(hw_new, WM_SETTEXT, 0, (LPARAM)_T("1"));
 
