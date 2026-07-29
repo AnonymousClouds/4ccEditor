@@ -45,6 +45,8 @@ void player_names_to_positions();
 
 void export_squad(HWND);
 void import_squad(HWND);
+void export_nightly(HWND);
+void import_nightly(HWND);
 
 void save_tactical_data(std::ofstream&, int);
 void load_tactical_data(std::ifstream&, int, int);
@@ -816,6 +818,14 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				case IDM_TEAM_LOADS:
 					if(gn_teamsel > -1) import_squad(H);
 					else MessageBox(H,_T("Please select a team to overwrite."),NULL,MB_ICONWARNING);
+				break;
+				case IDM_TACT_NIGHTS:
+					if (gn_teamsel > -1) export_nightly(H);
+					else MessageBox(H, _T("Please select a team to be saved."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_NIGHTL:
+					if (gn_teamsel > -1) import_nightly(H);
+					else MessageBox(H, _T("Please select a team to be overwrite."), NULL, MB_ICONWARNING);
 				break;
 				case IDM_DATA_OUTPUT:
 					if(gplayers) roster_data_output();
@@ -4471,11 +4481,13 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						{
 							if (gb_tactics_enabled)
 							{
+								gb_updating_tactics = true;
 								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_GETCURSEL, 0, 0);
 								//Reset formation to kick-off
 								SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
 								populate_tactics_tab(teamOffset, sel, 0);
 							}
+							gb_updating_tactics = false;
 						}
 						break;
 
@@ -4483,6 +4495,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						{
 							if (gb_tactics_enabled)
 							{
+								gb_updating_tactics = true;
 								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_GETCURSEL, 0, 0);
 								//Only repopulate if fluid
 								if (gteams[gn_teamsel].presets[gi_preset].fluid)
@@ -4495,6 +4508,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 									RECT rectFormation = create_rect(217, 5, 270, 370);
 									RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 								}
+								gb_updating_tactics = false;
 							}
 						}
 						break;
@@ -4983,6 +4997,8 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 							if (gb_tactics_enabled)
 							{
 								gteams[gn_teamsel].presets[gi_preset].fluid = !gteams[gn_teamsel].presets[gi_preset].fluid;
+								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
 							}
 						}
 						break;
@@ -5060,6 +5076,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						{
 							if (gb_tactics_enabled)
 							{
+								gb_updating_tactics = true;
 								//Find current GK
 								int curr_x, curr_y, curr_pos, current_index;
 								curr_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
@@ -5070,18 +5087,21 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								for (int ii = 0; ii < 11; ii++)
 								{
 									int player_index = gteams[gn_teamsel].starting11[ii];
-									if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos == 0x00)
+									if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].pos == 0x00)
 									{
 										gteams[gn_teamsel].starting11[gi_selected_player_field] = gteams[gn_teamsel].starting11[ii];
 										gteams[gn_teamsel].starting11[ii] = current_index;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].x = curr_x;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].y = curr_y;
+										//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].pos = curr_pos;
 										set_player_xy(ii, player_index + teamOffset, curr_pos, curr_x, curr_y);
 										break;
 									}
 								}
 
-								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].x = 54;
-								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].y = 3;
-								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[current_index].pos = 0x00;
+								//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = 54;
+								//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = 3;
+								//gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos = 0x00;
 								set_player_xy(gi_selected_player_field, current_index + teamOffset, 0x00, 54, 3);
 								SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
 								SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"52");
@@ -5092,6 +5112,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
 
 								gteams[gn_teamsel].b_changed = true;
+								gb_updating_tactics = false;
 							}
 						}
 						break;
@@ -6765,6 +6786,143 @@ void import_squad(HWND hwnd)
 	}
 }
 
+void export_nightly(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, csel, teamIndex;
+
+	if (gb_tactics_enabled != TRUE)
+		return;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+	teamIndex = gn_teamCbIndToArray[csel];
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR outPath[MAX_PATH] = _T("");
+	char defName[20];
+	strcpy(defName, gteams[teamIndex].short_name);
+	strcat(defName, " tactics.4ccn");
+	_tcscpy(outPath, A2T(defName));
+
+	ii=0;
+	const char* invalid_characters = "<>:\"/\\|?*";
+	while ((int)defName[ii]>0 && ii<10)
+	{
+		if ((int)(defName[ii])<32 || strchr(invalid_characters, defName[ii]))
+		{
+			_tcscpy(outPath, _T("tactics.4ccn"));
+			break;
+		}
+		ii++;
+	}
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)outPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Save tactics");
+
+	if (GetSaveFileName(&ofn))
+	{
+
+		//strcpy(outPath, T2A(tOutPath));
+		//Open file stream
+		std::ofstream output_file(outPath, std::ios::binary);
+
+		//Write out 4CCS version number to allow compatibility checks
+		output_file.write(gc_ver4ccn, 3);
+
+		//Write out PES version we're exporting from
+		char cPesVersion[3];
+		_itoa_s(giPesVersion, cPesVersion, 3, 10);
+		output_file.write(cPesVersion, 2);
+
+		//Write out the team ID
+		char cTeamId[8];
+		_ltoa_s(gteams[teamIndex].id, cTeamId, 8, 10);
+		output_file.write(cTeamId, 8);
+
+		save_tactical_data(output_file, teamIndex);
+
+		//Close filestream
+		output_file.close();
+	}
+}
+
+void import_nightly(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, jj, kk;
+
+	if (!(giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18))
+		return;
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR inPath[MAX_PATH] = _T("");
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)inPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Import tactics");
+
+	if (GetOpenFileName(&ofn))
+	{
+		std::ifstream input_file;
+
+		input_file.open(inPath, std::ios::binary);
+
+		//Check for  version compatibility
+		char cFileVersion[4];
+		input_file.read(cFileVersion, 3);
+		cFileVersion[3] = '\0';
+		if (strcmp(cFileVersion, gc_ver4ccn) != 0)
+		{
+			TCHAR message[200];
+			_stprintf(message, _T("Invalid 4CCN file!\r\nPlease save a 4CCN for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4ccn));
+			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+			input_file.close();
+			return;
+		}
+		//Get version this was imported from
+		char c_pesVer[3];
+		int pesVer;
+		input_file.read(c_pesVer, 2);
+		c_pesVer[2] = '\0';
+		pesVer = atoi(c_pesVer);
+		if (pesVer != giPesVersion)
+		{
+			TCHAR message[200];
+			_stprintf(message, _T("This tactics file is from a different version of PES than the currently loaded EDIT file!\r\nPES Version: %"), c_pesVer);
+			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+			input_file.close();
+			return;
+		}
+
+		//Read the team ID
+		char c_teamId[9];
+		input_file.read(c_teamId, 8);
+		c_teamId[8] = '\0';
+		//Disabled, this would enforce only loading tactics for the team who made the export
+		//int teamId = atoi(c_teamId); 
+		load_tactical_data(input_file, gn_teamsel, pesVer);
+		gteams[gn_teamsel].b_changed = true;
+
+		//Close filestream
+		input_file.close();
+
+		init_tactics_tab();
+	}
+}
+
 void save_tactical_data(std::ofstream& output_file, int teamIndex)
 {
 	char c_output;
@@ -7490,6 +7648,8 @@ void init_tactics_tab()
 		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+		EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
 
 		//Player Assignments BEGIN
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
