@@ -5033,8 +5033,8 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 									{
 										SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
 
-										wchar_t buff_x[3], buff_y[3];
-										swprintf_s(buff_x, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+										wchar_t buff_x[4], buff_y[3];
+										swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
 										swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
 										SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
 										SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
