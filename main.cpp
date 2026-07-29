@@ -4994,7 +4994,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					{
 						case IDB_TACT_FLUID:
 						{
-							if (gb_tactics_enabled)
+							if (gb_tactics_enabled && !gb_updating_tactics)
 							{
 								gteams[gn_teamsel].presets[gi_preset].fluid = !gteams[gn_teamsel].presets[gi_preset].fluid;
 								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
@@ -7648,8 +7648,6 @@ void init_tactics_tab()
 		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
-		EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
-		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
 
 		//Player Assignments BEGIN
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
@@ -7950,6 +7948,9 @@ void populate_tactics_tab(int teamOffset, int preset, int formation)
 		swprintf_s(buff_compactness, 3, L"%d", gteams[gn_teamsel].presets[preset].compactness);
 		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
 		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_defense - 1, 0);
+
+		EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[preset].fluid);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
 
 		bool enablePlayerSelect = false, populatePlayers = false;
 		int ii, index, instruction, val, len, windowId;
