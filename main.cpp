@@ -4528,6 +4528,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
 								}
 
+								gi_formation = sel;
 								gb_updating_tactics = false;
 							}
 						}
@@ -5016,9 +5017,20 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 						{
 							if (gb_tactics_enabled && !gb_updating_tactics)
 							{
+								gb_updating_tactics = true;
+
+								//If fluid is active, switch to the kickoff formation to prevent confusion
+								if (gteams[gn_teamsel].presets[gi_preset].fluid)
+								{
+									SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+									gi_formation = 0;
+									populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+								}
+
 								gteams[gn_teamsel].presets[gi_preset].fluid = !gteams[gn_teamsel].presets[gi_preset].fluid;
 								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
 								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
+								gb_updating_tactics = false;
 							}
 						}
 						break;
