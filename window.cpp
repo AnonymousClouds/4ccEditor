@@ -2192,38 +2192,39 @@ void setup_tab4(HWND H)
 	hw_new = CreateWindowEx(NULL, _T("ComboBox"), _T(""),
 		CBS_DROPDOWNLIST | WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_TABSTOP,
 		x+62, y+17, 55, 100, ghw_tab4, (HMENU)IDC_TACT_PLPOS, GetModuleHandle(NULL), NULL);
+	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("GK"));
+	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x00);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("CB"));
-	SendMessage(hw_new, CB_SETITEMDATA, 0, (byte)0x01);
+	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x01);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("LB"));
-	SendMessage(hw_new, CB_SETITEMDATA, 1, (byte)0x02);
+	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x02);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("RB"));
-	SendMessage(hw_new, CB_SETITEMDATA, 2, (byte)0x03);
+	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x03);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("DMF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 3, (byte)0x04);
+	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x04);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("CMF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 4, (byte)0x05);
+	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x05);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("LMF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 5, (byte)0x06);
+	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x06);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("RMF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 6, (byte)0x07);
+	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x07);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("AMF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 7, (byte)0x08);
+	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x08);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("LWF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 8, (byte)0x09);
+	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x09);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("RWF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 9, (byte)0x0A);
+	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0A);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("SS"));
-	SendMessage(hw_new, CB_SETITEMDATA, 10, (byte)0x0B);
+	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0B);
 	SendMessage(hw_new, CB_ADDSTRING, 0, (LPARAM)_T("CF"));
-	SendMessage(hw_new, CB_SETITEMDATA, 11, (byte)0x0C);
-	//Do not allow selection of GK here. Since the game only allows 1 GK make it seperate button instead
+	SendMessage(hw_new, CB_SETITEMDATA, 12, (byte)0x0C);
 	SendMessage(hw_new, CB_SETCURSEL, (WPARAM)0, 0);
 	setup_combo(hw_new, ghFont, cb2_cntl_proc);
 
-	hw_new = CreateWindowEx(0, _T("Button"), _T("Make GK"),
+	/*hw_new = CreateWindowEx(0, _T("Button"), _T("Make GK"),
 		BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 		x+124, y+16, 64, 25, ghw_tab4, (HMENU)IDB_TACT_BTNGK, GetModuleHandle(NULL), NULL);
-	setup_control(hw_new, ghFont, scale_cntl_proc);
+	setup_control(hw_new, ghFont, scale_cntl_proc);*/
 
 	hw_new = CreateWindowEx(0, _T("Static"), _T("X:"),
 		SS_SIMPLE | SS_NOPREFIX | WS_CHILD | WS_VISIBLE,
