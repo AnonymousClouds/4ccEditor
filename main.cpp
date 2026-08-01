@@ -3563,11 +3563,23 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					int player_index = -1;
 					if (id <= IDB_TACT_PL11) player_index = id - IDB_TACT_PL1;
 					else player_index = id - IDC_STATIC_PL1;
+					//This is stupid, never push it to the main branch
+
+					bool hasOtherGk = false;
+					for (int ii = 0; ii < 11; ii++)
+					{
+						if (ii == player_index) continue;
+						else if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].pos == 0x00)
+						{
+							hasOtherGk = true;
+							break;
+						}
+					}
 
 					//If click is in bounds of the field, track where it started and who was clicked
 					if (pos.x >= 222 && pos.x <= 482 && pos.y >= 20 && pos.y <= 370)
 					{
-						if (gi_formation != 0 || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+						if (gi_formation != 0 || hasOtherGk || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
 						{
 							gb_is_dragging = true;
 							gi_drag_x = pos.x;
@@ -3592,7 +3604,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
 									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
 
-									if (gi_formation != 0 || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+									if (gi_formation != 0 || hasOtherGk || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
 									{
 										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos, 0);
 										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
@@ -4543,7 +4555,10 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								int pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, pos_ind, 0);
 								int current_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
 								int current_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+
+
 								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos = pos;
+
 
 								set_player_xy(gi_selected_player_field, current_index + teamOffset, pos, current_x, current_y);
 
@@ -5079,7 +5094,20 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 										SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
 										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos, 0);
 
-										if (gi_formation != 0 || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos != 0x00)
+
+										//This is stupid, never push it to the main branch
+										bool hasOtherGk = false;
+										for (int ii = 0; ii < 11; ii++)
+										{
+											if (ii == gi_selected_player_field) continue;
+											else if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].pos == 0x00)
+											{
+												hasOtherGk = true;
+												break;
+											}
+										}
+
+										if (gi_formation != 0 || hasOtherGk || gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos != 0x00)
 										{
 											EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
 											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
@@ -8290,11 +8318,11 @@ void set_player_xy(int index, int player_id, byte pos, byte player_x, byte playe
 	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 	{
 		//If gk force X and Y to 52 and 3 if they aren't for visual consistency, since the game will already do that upon match start
-		if (pos == 0x00 && gi_formation == 0)
+		/*if (pos == 0x00 && gi_formation == 0)
 		{
 			if (player_x != 52) player_x = 52;
 			if (player_y != 3) player_y = 3;
-		}
+		}*/
 
 		//Actual pixel position of the center of the label and button
 		int pixel_x = ((double)player_x / (double)0x68) * box_width;
