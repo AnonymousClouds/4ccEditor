@@ -923,11 +923,11 @@ void write_team_info15(team_entry, int&, void*);
 void write_teamplayer_info15(team_entry, int&, void*);
 void write_team_tactics15(team_entry, int&, void*);
 
-void fill_player_entry16(player_entry &, int &, void*);
-void fill_appearance_entry16(player_entry &, int &, void*);
+void fill_player_entry16(player_entry &, int &, void*, bool preserveId = false);
+void fill_appearance_entry16(player_entry &, int &, void*, bool preserveId = false);
 void fill_team_ids16(team_entry &, int &, void*);
 void fill_team_rosters16(int &, void*, team_entry*, int);
-void fill_team_tactics16(int &, void*, team_entry*, int);
+void fill_team_tactics16(int &, void*, team_entry*, int, int t_ind = -1);
 void extract_player_entry16(player_entry, int &, int &, void*);
 void extract_team_info16(team_entry, int &, void*);
 void extract_teamplayer_info16(team_entry, int &, void*);

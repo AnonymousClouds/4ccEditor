@@ -1,10 +1,13 @@
 #include "editor.h"
 
-void fill_player_entry16(player_entry &players, int &current_byte, void* ghdescriptor)
+void fill_player_entry16(player_entry &players, int &current_byte, void* ghdescriptor, bool preserveId)
 {
 	FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
 
-	players.id = read_dataOld(0, 4 * 8, current_byte, pDescriptorOld);
+	int id = read_dataOld(0, 4 * 8, current_byte, pDescriptorOld);
+	if (!preserveId)
+		players.id = id;
+
 	/*
 	if(players.id==73301)//Debug
 	{
@@ -192,7 +195,7 @@ void fill_player_entry16(player_entry &players, int &current_byte, void* ghdescr
 }
 
 
-void fill_appearance_entry16(player_entry &players, int &current_byte, void* ghdescriptor)
+void fill_appearance_entry16(player_entry &players, int &current_byte, void* ghdescriptor, bool preserveId)
 {
 	FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
 
@@ -200,7 +203,7 @@ void fill_appearance_entry16(player_entry &players, int &current_byte, void* ghd
 	unsigned long checkId;
 	checkId = read_dataOld(0, 4*8, current_byte, pDescriptorOld);
 
-	if(players.id!=checkId) return;
+	if(players.id!=checkId && !preserveId) return;
 
 	players.b_edit_face = read_dataOld(0, 1, current_byte, pDescriptorOld);
 	players.b_edit_hair = read_dataOld(1, 1, current_byte, pDescriptorOld);
@@ -339,18 +342,20 @@ void fill_team_rosters16(int &current_byte, void* ghdescriptor, team_entry* gtea
 }
 
 
-void fill_team_tactics16(int &current_byte, void* ghdescriptor, team_entry* gteams, int gnum_teams)
+void fill_team_tactics16(int &current_byte, void* ghdescriptor, team_entry* gteams, int gnum_teams, int t_ind)
 {
 	FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
 
-	int t_ind;
 	unsigned long team_id;
 
 	team_id = read_dataOld(0, 4*8, current_byte, pDescriptorOld);
 
-	for(t_ind=0;t_ind<gnum_teams;t_ind++)
+	if (t_ind == -1)
 	{
-		if(team_id == gteams[t_ind].id) break;
+		for(t_ind=0;t_ind<gnum_teams;t_ind++)
+		{
+			if(team_id == gteams[t_ind].id) break;
+		}
 	}
 	//current_byte+=0x1FA;
 	
