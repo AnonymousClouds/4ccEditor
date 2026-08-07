@@ -7489,63 +7489,53 @@ int open_texport(HWND hwnd, int pesVersion, TCHAR* pcs_title)
 
 void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 {
-	int ii, jj, kk, num_on_team, current_byte, appearance_byte;
+	int ii, jj, kk, num_on_team, current_byte;
 
 	if (ghdescriptor)
 	{
-		if (giPesVersion>=18)
+		if (pesVersion>=18)
 			destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
-		else if (giPesVersion >= 16)
+		else if (pesVersion >= 16)
 			destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
 		else
 			destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
 		ghdescriptor = NULL;
 	}
 
-	if (giPesVersion == 15)
+	if (pesVersion == 15)
 	{
 		//Do nothing, should not reach here
 	}
-	else if (giPesVersion == 16)
+	else if (pesVersion == 16)
 	{
 		ghdescriptor = (void*)createFileDescriptorOld();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
 		uint8_t* pfin = readFile(pcs_file_name, NULL);
 		decryptWithKeyOld((FileDescriptorOld*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
 
-		////place player info+appearance entries into array of structs
-		//current_byte = 0x4C;
-		//appearance_byte = 0x2AB9CC;
+		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
+		current_byte = 0x10298;
+		fill_team_tactics16(current_byte, ghdescriptor, gteams, gnum_teams, gn_teamsel);
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x510660;
 		//if (gplayers != NULL) delete[] gplayers;
 		//gplayers = new player_entry[gnum_players];
-		//for (ii=0; ii<gnum_players; ii++)
-		//{
-		//	fill_player_entry16(gplayers[ii], current_byte, ghdescriptor);
-		//	fill_appearance_entry16(gplayers[ii], appearance_byte, ghdescriptor);
-		//}
-
-		////place team entries into array of structs
-		//current_byte = 0x46310C;
-		//if (gteams != NULL) delete[] gteams;
-		//gteams = new team_entry[gnum_teams];
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_ids16(gteams[ii], current_byte, ghdescriptor);
-		//}
-
-		//current_byte = 0x4FCC6C;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_rosters16(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
-
-		//current_byte = 0x51F814;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_tactics16(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					fill_player_entry16(gplayers[jj], current_byte, ghdescriptor, true);
+					fill_appearance_entry16(gplayers[jj], current_byte, ghdescriptor, true);
+					break;
+				}
+			}
+		}
 	}
-	else if (giPesVersion == 17)
+	else if (pesVersion == 17)
 	{
 		ghdescriptor = (void*)createFileDescriptorOld();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
@@ -7573,7 +7563,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 			}
 		}
 	}
-	else if (giPesVersion == 18)
+	else if (pesVersion == 18)
 	{
 		ghdescriptor = (void*)createFileDescriptorNew();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes18");
@@ -7610,7 +7600,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 		//	fill_team_tactics18(current_byte, ghdescriptor, gteams, gnum_teams);
 		//}
 	}
-	else if (giPesVersion == 19) // PES 19
+	else if (pesVersion == 19) // PES 19
 	{
 		ghdescriptor = (void*)createFileDescriptorNew();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes19");
@@ -7650,7 +7640,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	else // PES 20/21
 	{
 		ghdescriptor = (void*)createFileDescriptorNew();
-		if (giPesVersion==20)
+		if (pesVersion==20)
 			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes20");
 		else
 			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes21");
@@ -7685,14 +7675,14 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 		//	}
 		//}
 
-		//if (giPesVersion == 20) current_byte = 0x9ccc04;
+		//if (pesVersion == 20) current_byte = 0x9ccc04;
 		//else current_byte = 0x9D4648;
 		//for (ii=0; ii<gnum_teams; ii++)
 		//{
 		//	fill_team_rosters20(current_byte, ghdescriptor, gteams, gnum_teams);
 		//}
 
-		//if (giPesVersion == 20) current_byte = 0xa01e3c;
+		//if (pesVersion == 20) current_byte = 0xa01e3c;
 		//else current_byte = 0xA09880;
 		//for (ii=0; ii<gnum_teams; ii++)
 		//{
@@ -7780,7 +7770,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	}
 
 	//Translate advanced instructions if necessary
-	if (giPesVersion > 16 && pesVersion != giPesVersion)
+	if (pesVersion > 16 && pesVersion != giPesVersion)
 	{
 		for (ii = 0; ii < 3; ii++)
 		{
@@ -7792,6 +7782,21 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 			gteams[gn_teamsel].presets[ii].atk_instructions[1].instruction = ai2;
 			gteams[gn_teamsel].presets[ii].def_instructions[0].instruction = di1;
 			gteams[gn_teamsel].presets[ii].def_instructions[1].instruction = di2;
+		}
+	}
+	//Set advanced instructions to 0 if importing a 16 texport
+	else if (pesVersion == 16 && pesVersion != giPesVersion)
+	{
+		for (ii = 0; ii < 3; ii++)
+		{
+			gteams[gn_teamsel].presets[ii].atk_instructions[0].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[0].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[1].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[1].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[0].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[0].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[1].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[1].player_id = 0x00;
 		}
 	}
 
