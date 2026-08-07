@@ -933,10 +933,10 @@ void extract_team_info16(team_entry, int &, void*);
 void extract_teamplayer_info16(team_entry, int &, void*);
 void extract_team_tactics16(team_entry, int &, void*);
 
-void fill_player_entry17(player_entry &, int &, void*);
+void fill_player_entry17(player_entry &, int &, void*, bool preserveId = false);
 void fill_team_ids17(team_entry &, int &, void*);
 void fill_team_rosters17(int &, void*, team_entry*, int);
-void fill_team_tactics17(int &, void*, team_entry*, int);
+void fill_team_tactics17(int &, void*, team_entry*, int, int t_ind = -1);
 void extract_player_entry17(player_entry, int &, void*);
 void extract_team_info17(team_entry, int &, void*);
 void extract_teamplayer_info17(team_entry, int &, void*);

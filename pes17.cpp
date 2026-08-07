@@ -1,10 +1,12 @@
 #include "editor.h"
 
-void fill_player_entry17(player_entry &players, int &current_byte, void* ghdescriptor)
+void fill_player_entry17(player_entry &players, int &current_byte, void* ghdescriptor, bool preserveId)
 {
 	FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
-
-	players.id = read_dataOld(0, 4 * 8, current_byte, pDescriptorOld);
+	
+	int id = read_dataOld(0, 4 * 8, current_byte, pDescriptorOld);
+	if (!preserveId)
+		players.id = id;
 
 	current_byte += 0x6;
 
@@ -349,18 +351,20 @@ void fill_team_rosters17(int &current_byte, void* ghdescriptor, team_entry* gtea
 }
 
 
-void fill_team_tactics17(int &current_byte, void* ghdescriptor, team_entry* gteams, int gnum_teams)
+void fill_team_tactics17(int &current_byte, void* ghdescriptor, team_entry* gteams, int gnum_teams, int t_ind)
 {
 	FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
 
-	int t_ind;
 	unsigned long team_id;
 
 	team_id = read_dataOld(0, 4 * 8, current_byte, pDescriptorOld);
 
-	for(t_ind=0;t_ind<gnum_teams;t_ind++)
+	if (t_ind == -1)
 	{
-		if(team_id == gteams[t_ind].id) break;
+		for (t_ind=0; t_ind<gnum_teams; t_ind++)
+		{
+			if (team_id == gteams[t_ind].id) break;
+		}
 	}
 	//current_byte+=0x1E0;
 
