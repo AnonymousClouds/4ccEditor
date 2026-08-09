@@ -7558,6 +7558,15 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 				{
 					fill_player_entry16(gplayers[jj], current_byte, ghdescriptor, true);
 					fill_appearance_entry16(gplayers[jj], current_byte, ghdescriptor, true);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
+					gplayers[jj].phys_cont = 77;
 					break;
 				}
 			}
@@ -7586,136 +7595,91 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 				if (gplayers[jj].id == teamOffset + ii)
 				{
 					fill_player_entry17(gplayers[jj], current_byte, ghdescriptor, true);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
 					break;
 				}
 			}
 		}
 	}
-	else if (pesVersion == 18)
+	else if (pesVersion >= 18)
 	{
-		ghdescriptor = (void*)createFileDescriptorNew();
-		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes18");
-		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		//18 and beyond use an entirely different encryption algorithm for the .ted files than earlier, the existing decrypter can't handle it so use a custom function.
+		std::ifstream input_file;
+		input_file.open(pcs_file_name, std::ios::binary);
+		//Ignore the first 30 bytes, they are not important
+		input_file.ignore(0x30);
+		//Load the key we'll use to decrypt the file
+		char key[0x20] = {};
+		char data[2];
+		for (ii = 0; ii < 0x20; ii++)
+		{
+			input_file.read(data, 1);
+			key[ii] = data[0];
+		}
 
-		////place player info+appearance entries into array of structs
-		//current_byte = 0x7C;
-		//if (gplayers != NULL) delete[] gplayers;
-		//gplayers = new player_entry[gnum_players];
-		//for (ii=0; ii<gnum_players; ii++)
-		//{
-		//	fill_player_entry18(gplayers[ii], current_byte, ghdescriptor);
-		//}
+		//Just make the array the length of the longest file for simplicity of reuse
+		byte contents[0x39E4] = {};
+		//Each version starts at a different byte in the key
+		int keyPos = -1, length = -1, tacticsPos = -1, playersPos = -1;
+		if (pesVersion == 18)
+		{
+			keyPos = 0x12;
+			length = 0x1FC0;
+			tacticsPos = 0x32C;
+			playersPos = 0x834;
+		}
+		else if (pesVersion == 19)
+		{
+			keyPos = 0x13;
+			length = 0x25B0;
+			tacticsPos = 0x33C;
+			playersPos = 0x844;
+		}
+		else if (pesVersion == 20 || pesVersion == 21) //20 is untested, but should be mostly the same with probably just a 14 for the keyPos
+		{
+			keyPos = pesVersion == 20 ? 0x14 : 0x15;
+			length = 0x39E4;
+			tacticsPos = 0x410;
+			playersPos = 0x918;
+		}
 
-		////place team entries into array of structs
-		//current_byte = 0x3C3E5C;
-		//if (gteams != NULL) delete[] gteams;
-		//gteams = new team_entry[gnum_teams];
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_ids18(gteams[ii], current_byte, ghdescriptor);
-		//}
+		for (int currentPos = 0x50; currentPos < length; currentPos++)
+		{
+			input_file.read(data, 1);
+			contents[currentPos] = ((byte)data[0] ^ key[keyPos]);
+			keyPos++;
+			if (keyPos == 0x20)
+				keyPos = 0;
+		}
 
-		//current_byte = 0x46FF54;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_rosters18(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
+		if (pesVersion == 18) fill_team_tactics18_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else if (pesVersion == 19) fill_team_tactics19_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else if (pesVersion == 20 || pesVersion == 21) fill_team_tactics20_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else return; //How did you get here?
 
-		//current_byte = 0x488B74;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_tactics18(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
-	}
-	else if (pesVersion == 19) // PES 19
-	{
-		ghdescriptor = (void*)createFileDescriptorNew();
-		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes19");
-		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					if (pesVersion == 18) fill_player_entry18_texport(gplayers[jj], playersPos, contents);
+					else if (pesVersion == 19) fill_player_entry19_texport(gplayers[jj], playersPos, contents);
+					else if (pesVersion == 20 || pesVersion == 21) fill_player_entry20_texport(gplayers[jj], playersPos, contents);
+					else return; //How did you get here?
 
-		////place player info+appearance entries into array of structs
-		//current_byte = 0x7C;
-		//if (gplayers != NULL) delete[] gplayers;
-		//gplayers = new player_entry[gnum_players];
-		//for (ii=0; ii<gnum_players; ii++)
-		//{
-		//	fill_player_entry19(gplayers[ii], current_byte, ghdescriptor);
-		//}
-
-		////place team entries into array of structs
-		//current_byte = 0x5BCC7C;
-		//if (gteams != NULL) delete[] gteams;
-		//gteams = new team_entry[gnum_teams];
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_ids19(gteams[ii], current_byte, ghdescriptor);
-		//}
-
-		//current_byte = 0x6773C4;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_rosters19(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
-
-		//current_byte = 0x69EC8C;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_tactics19(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
-	}
-	else // PES 20/21
-	{
-		ghdescriptor = (void*)createFileDescriptorNew();
-		if (pesVersion==20)
-			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes20");
-		else
-			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes21");
-		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
-
-		////place player info+appearance entries into array of structs
-		//current_byte = 0x7C;
-		//if (gplayers != NULL) delete[] gplayers;
-		//gplayers = new player_entry[gnum_players];
-		//for (ii=0; ii<gnum_players; ii++)
-		//{
-		//	fill_player_entry20(gplayers[ii], current_byte, ghdescriptor);
-		//}
-
-		////place team entries into array of structs
-		//current_byte = 0x8ED2FC;
-		//if (gteams != NULL) delete[] gteams;
-		//gteams = new team_entry[gnum_teams];
-		//if (giPesVersion == 20)
-		//{
-		//	for (ii = 0; ii < gnum_teams; ii++)
-		//	{
-		//		fill_team_ids20(gteams[ii], current_byte, ghdescriptor);
-		//	}
-		//}
-		//else
-		//{
-		//	for (ii = 0; ii < gnum_teams; ii++)
-		//	{
-		//		fill_team_ids21(gteams[ii], current_byte, ghdescriptor);
-		//	}
-		//}
-
-		//if (pesVersion == 20) current_byte = 0x9ccc04;
-		//else current_byte = 0x9D4648;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_rosters20(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
-
-		//if (pesVersion == 20) current_byte = 0xa01e3c;
-		//else current_byte = 0xA09880;
-		//for (ii=0; ii<gnum_teams; ii++)
-		//{
-		//	fill_team_tactics20(current_byte, ghdescriptor, gteams, gnum_teams);
-		//}
+					break;
+				}
+			}
+		}
 	}
 
 	//Find, hide loose players

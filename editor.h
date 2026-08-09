@@ -946,6 +946,8 @@ void fill_player_entry18(player_entry &, int &, void*);
 void fill_team_ids18(team_entry &, int &, void*);
 void fill_team_rosters18(int &, void*, team_entry*, int);
 void fill_team_tactics18(int &, void*, team_entry*, int);
+void fill_player_entry18_texport(player_entry &, int &, byte*);
+void fill_team_tactics18_texport(int &, byte*, team_entry*, int);
 void extract_player_entry18(player_entry, int &, void*);
 void extract_team_info18(team_entry, int &, void*);
 void extract_teamplayer_info18(team_entry, int &, void*);
@@ -955,6 +957,8 @@ void fill_player_entry19(player_entry &, int &, void*);
 void fill_team_ids19(team_entry &, int &, void*);
 void fill_team_rosters19(int &, void*, team_entry*, int);
 void fill_team_tactics19(int &, void*, team_entry*, int);
+void fill_player_entry19_texport(player_entry &, int &, byte*);
+void fill_team_tactics19_texport(int &, byte*, team_entry*, int);
 void extract_player_entry19(player_entry, int &, void*);
 void extract_team_info19(team_entry, int &, void*);
 void extract_teamplayer_info19(team_entry, int &, void*);
@@ -965,6 +969,8 @@ void fill_team_ids20(team_entry &, int &, void*);
 void fill_team_ids21(team_entry&, int&, void*);
 void fill_team_rosters20(int &, void*, team_entry*, int);
 void fill_team_tactics20(int &, void*, team_entry*, int);
+void fill_player_entry20_texport(player_entry &, int &, byte*);
+void fill_team_tactics20_texport(int &, byte*, team_entry*, int);
 void extract_player_entry20(player_entry, int &, void*);
 void extract_team_info20(team_entry, int &, void*);
 void extract_team_info21(team_entry, int&, void*);
@@ -977,6 +983,7 @@ void save_comparator(HWND, int, player_entry*, int, team_entry*, int, TCHAR*, vo
 
 //data_util.cpp functions
 int read_data(int, int, int&, FileDescriptorNew*);
+int read_data_raw(int start_bit, int bits_to_read, int& current_byte, byte* data);
 void write_data(int, int, int, int&, FileDescriptorNew*);
 int read_dataOld(int, int, int&, FileDescriptorOld*);
 void write_dataOld(int, int, int, int&, FileDescriptorOld*);
