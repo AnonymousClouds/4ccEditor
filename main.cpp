@@ -7491,16 +7491,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 {
 	int ii, jj, kk, num_on_team, current_byte;
 
-	if (ghdescriptor)
-	{
-		if (pesVersion>=18)
-			destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
-		else if (pesVersion >= 16)
-			destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
-		else
-			destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
-		ghdescriptor = NULL;
-	}
+	void* descriptor;
 
 	if (pesVersion == 15)
 	{
@@ -7508,14 +7499,14 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	}
 	else if (pesVersion == 16)
 	{
-		ghdescriptor = (void*)createFileDescriptorOld();
+		descriptor = (void*)createFileDescriptorOld();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
 		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyOld((FileDescriptorOld*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
 
 		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
 		current_byte = 0x10298;
-		fill_team_tactics16(current_byte, ghdescriptor, gteams, gnum_teams, gn_teamsel);
+		fill_team_tactics16(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
 
 		//place player info+appearance entries into array of structs
 		current_byte = 0x510660;
@@ -7528,8 +7519,8 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 			{
 				if (gplayers[jj].id == teamOffset + ii)
 				{
-					fill_player_entry16(gplayers[jj], current_byte, ghdescriptor, true);
-					fill_appearance_entry16(gplayers[jj], current_byte, ghdescriptor, true);
+					fill_player_entry16(gplayers[jj], current_byte, descriptor, true);
+					fill_appearance_entry16(gplayers[jj], current_byte, descriptor, true);
 
 					//Set the properties aren't in 17 to 0 or default;
 					for (int ii = 28; ii < 41; ii++)
@@ -7546,14 +7537,14 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	}
 	else if (pesVersion == 17)
 	{
-		ghdescriptor = (void*)createFileDescriptorOld();
+		descriptor = (void*)createFileDescriptorOld();
 		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
 		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyOld((FileDescriptorOld*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
 
 		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
 		current_byte = 0x10330;
-		fill_team_tactics17(current_byte, ghdescriptor, gteams, gnum_teams, gn_teamsel);
+		fill_team_tactics17(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
 
 		//place player info+appearance entries into array of structs
 		current_byte = 0x510840;
@@ -7566,7 +7557,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 			{
 				if (gplayers[jj].id == teamOffset + ii)
 				{
-					fill_player_entry17(gplayers[jj], current_byte, ghdescriptor, true);
+					fill_player_entry17(gplayers[jj], current_byte, descriptor, true);
 
 					//Set the properties aren't in 17 to 0 or default;
 					for (int ii = 28; ii < 41; ii++)
@@ -7763,6 +7754,15 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 			gteams[gn_teamsel].presets[ii].def_instructions[1].player_id = 0x00;
 		}
 	}
+
+	//Delete teh file descriptor, so that we don't overwrite it li
+	if (pesVersion>=18)
+		destroyFileDescriptorNew((FileDescriptorNew*)descriptor);
+	else if (pesVersion >= 16)
+		destroyFileDescriptorOld((FileDescriptorOld*)descriptor);
+	else
+		destroyFileDescriptor15((FileDescriptor15*)descriptor);
+	descriptor = NULL;
 
 	init_tactics_tab();
 
