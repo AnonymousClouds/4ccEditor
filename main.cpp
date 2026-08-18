@@ -7520,13 +7520,6 @@ int open_texport(HWND hwnd, int pesVersion, TCHAR* pcs_title)
 		MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
 		return 1;
 	}
-	if (pesVersion != 16 && pesVersion != 17 && pesVersion != 18 && pesVersion != 19 && pesVersion != 20 && pesVersion != 21)
-	{
-		TCHAR errBuffer[MAX_PATH] = _T("");
-		_stprintf_s(errBuffer, MAX_PATH, _T("TEXPORTS for PES 15 are not supported."));
-		MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
-		return 1;
-	}
 	gb_forceupdate = false;
 	gn_forceupdate = -1;
 	gn_listsel = -1;
