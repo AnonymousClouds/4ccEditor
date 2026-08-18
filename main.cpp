@@ -100,7 +100,7 @@ int SD_GetScrollPos(HWND hwnd, int bar, UINT code);
 //----------------------------------------------------------------------
 /*Global variables*/
 char gc_ver4ccs[] = "21a";
-char gc_ver4ccn[] = "001";
+char gc_ver4cct[] = "001";
 HINSTANCE ghinst;			//Main window instance
 HINSTANCE hPesDecryptDLL;	//Handle to libpesXcrypter.dll 
 HINSTANCE hPes15DecryptDLL;	//Handle to libpes15crypter.dll 
@@ -6895,7 +6895,7 @@ void export_nightly(HWND hwnd)
 	TCHAR outPath[MAX_PATH] = _T("");
 	char defName[20];
 	strcpy(defName, gteams[teamIndex].short_name);
-	strcat(defName, " tactics.4ccn");
+	strcat(defName, " tactics.4cct");
 	_tcscpy(outPath, A2T(defName));
 
 	ii=0;
@@ -6904,7 +6904,7 @@ void export_nightly(HWND hwnd)
 	{
 		if ((int)(defName[ii])<32 || strchr(invalid_characters, defName[ii]))
 		{
-			_tcscpy(outPath, _T("tactics.4ccn"));
+			_tcscpy(outPath, _T("tactics.4cct"));
 			break;
 		}
 		ii++;
@@ -6927,7 +6927,7 @@ void export_nightly(HWND hwnd)
 		std::ofstream output_file(outPath, std::ios::binary);
 
 		//Write out 4CCS version number to allow compatibility checks
-		output_file.write(gc_ver4ccn, 3);
+		output_file.write(gc_ver4cct, 3);
 
 		//Write out PES version we're exporting from
 		char cPesVersion[3];
@@ -6977,10 +6977,10 @@ void import_nightly(HWND hwnd)
 		char cFileVersion[4];
 		input_file.read(cFileVersion, 3);
 		cFileVersion[3] = '\0';
-		if (strcmp(cFileVersion, gc_ver4ccn) != 0)
+		if (strcmp(cFileVersion, gc_ver4cct) != 0)
 		{
 			TCHAR message[200];
-			_stprintf(message, _T("Invalid 4CCN file!\r\nPlease save a 4CCN for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4ccn));
+			_stprintf(message, _T("Invalid 4CCT file!\r\nPlease save a 4CCT for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4cct));
 			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
 			input_file.close();
 			return;
