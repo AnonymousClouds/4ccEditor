@@ -777,6 +777,9 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					ret = DoFileOpen(H, 21, _T("Open PES21 EDIT file"));
 					if (ret) giPesVersion = prevPesVersion;
 				break;
+				case ID_TEXP_OPEN_15_EN:
+					ret = open_texport(H, 15, _T("Open PES16 TEXPORT file"));
+				break;
 				case ID_TEXP_OPEN_16_EN:
 					ret = open_texport(H, 16, _T("Open PES16 TEXPORT file"));
 				break;
@@ -7557,16 +7560,6 @@ int open_texport(HWND hwnd, int pesVersion, TCHAR* pcs_title)
 			//bool checkthis;
 			//checkthis = (code == EXCEPTION_ACCESS_VIOLATION);
 			//Clear all entries, as no save has been loaded
-			if (ghdescriptor)
-			{
-				if (giPesVersion>=18)
-					destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
-				else if (giPesVersion >= 16)
-					destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
-				else
-					destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
-				ghdescriptor = NULL;
-			}
 			return 1;
 		}
 		return 0;
@@ -7582,7 +7575,72 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 
 	if (pesVersion == 15)
 	{
-		//Do nothing, should not reach here
+		descriptor = (void*)createFileDescriptor15();
+		uint32_t inputLen = 0;
+		uint8_t* pfin = readFile(pcs_file_name, &inputLen);
+		((FileDescriptor15*)descriptor)->dataSize = inputLen; //IMPORTANT: need to set the dataSize here
+		decryptFile15((FileDescriptor15*)descriptor, pfin);
+
+		current_byte = 0x10298;
+		read_team_tactics15(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
+
+		current_byte = 0x51065C;
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					read_player_entry15(gplayers[jj], current_byte, descriptor, true);
+					read_appearance_entry15_raw(gplayers[jj], current_byte, descriptor);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
+					gplayers[jj].phys_cont = 77;
+					break;
+				}
+			}
+		}
+
+		//First, generate map b/w player ID and Appearance Entry start byte so we can access the correct start byte position
+		// for each player ID when we loop over the Player Entry, even if they're in different orders
+		/*int appearance_byte = 0x2AB9CC;
+		int pid = 0;
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			build_appearance_map15(g_umap_pid_to_startByte, appearance_byte, ghdescriptor);
+		}*/
+
+		//place player info+appearance entries into array of structs
+		/*current_byte = 0x4C;
+		if (gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			read_player_entry15(gplayers[ii], current_byte, ghdescriptor);
+			read_appearance_entry15(gplayers[ii], g_umap_pid_to_startByte, ghdescriptor);
+		}*/
+
+		//Place team entries into array of structs
+		/*current_byte = 0x44AA6C;
+		if (gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_ids15(gteams[ii], current_byte, ghdescriptor);
+		}*/
+
+		/*current_byte = 0x4E45CC;
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_rosters15(current_byte, ghdescriptor, gteams, gnum_teams);
+		}*/
 	}
 	else if (pesVersion == 16)
 	{
