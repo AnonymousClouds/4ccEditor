@@ -36,6 +36,7 @@ BEGIN
         MENUITEM SEPARATOR
 		POPUP "&Import Texport file (select version)"
 		BEGIN
+			MENUITEM "&Import 15 Texport file", ID_TEXP_OPEN_15_EN
 			MENUITEM "&Import 16 Texport file", ID_TEXP_OPEN_16_EN
 			MENUITEM "&Import 17 Texport file", ID_TEXP_OPEN_17_EN
 			MENUITEM "&Import 18 Texport file", ID_TEXP_OPEN_18_EN

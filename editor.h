@@ -913,11 +913,12 @@ extern unsigned char n_playstyle2021to19[];
 typedef std::unordered_map<int, int> appearance_map;
 
 void build_appearance_map15(appearance_map&, int&, void*);
-void read_player_entry15(player_entry&, int&, void*);
+void read_player_entry15(player_entry&, int&, void*, bool preserveId = false);
 void read_appearance_entry15(player_entry&, appearance_map&, void*);
+void read_appearance_entry15_raw(player_entry&, int&, void*);
 void read_team_ids15(team_entry&, int&, void*);
 void read_team_rosters15(int&, void*, team_entry*, int);
-void read_team_tactics15(int&, void*, team_entry*, int);
+void read_team_tactics15(int&, void*, team_entry*, int, int t_ind = -1);
 void write_player_entry15(player_entry, int&, appearance_map&, void*);
 void write_team_info15(team_entry, int&, void*);
 void write_teamplayer_info15(team_entry, int&, void*);
