@@ -92,6 +92,10 @@ wchar_t* get_position_name_from_byte(byte pos);
 byte translate_adv_instruction(byte, int pesVersion = -1); //Standardize the advance instruction for import tactics between versions
 byte get_translated_adv_instruction(byte); //Reconverts the translated instruction to an appropriate one for the current version
 RECT create_rect(int x, int y, int width, int height);
+void copyPreset(int p1, int p2);
+void swapPreset(int p1, int p2);
+void copyFormation(int f1, int f2);
+void swapFormation(int f1, int f2);
 
 void SD_OnHVScroll(HWND hwnd, int bar, UINT code);
 void SD_ScrollClient(HWND hwnd, int bar, int pos);
@@ -846,6 +850,96 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				case IDM_TACT_NIGHTL:
 					if (gn_teamsel > -1) import_nightly(H);
 					else MessageBox(H, _T("Please select a team to be overwrite."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_2_P:
+					if (gn_teamsel > -1) copyPreset(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_3_P:
+					if (gn_teamsel > -1) copyPreset(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_1_P:
+					if (gn_teamsel > -1) copyPreset(1, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_3_P:
+					if (gn_teamsel > -1) copyPreset(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_1_P:
+					if (gn_teamsel > -1) copyPreset(2, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_2_P:
+					if (gn_teamsel > -1) copyPreset(2, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_2_P:
+					if (gn_teamsel > -1) swapPreset(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_3_P:
+					if (gn_teamsel > -1) swapPreset(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP2_3_P:
+					if (gn_teamsel > -1) swapPreset(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_2_F:
+					if (gn_teamsel > -1) copyFormation(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_3_F:
+					if (gn_teamsel > -1) copyFormation(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_1_F:
+					if (gn_teamsel > -1) copyFormation(1, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_3_F:
+					if (gn_teamsel > -1) copyFormation(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_1_F:
+					if (gn_teamsel > -1) copyFormation(2, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_2_F:
+					if (gn_teamsel > -1) copyFormation(2, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_2_F:
+					if (gn_teamsel > -1) swapFormation(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_3_F:
+					if (gn_teamsel > -1) swapFormation(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP2_3_F:
+					if (gn_teamsel > -1) swapFormation(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
 				break;
 				case IDM_DATA_OUTPUT:
 					if(gplayers) roster_data_output();
@@ -8791,6 +8885,58 @@ void update_backline(int teamOffset)
 		SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
 		SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
 	}
+}
+
+void copyPreset(int p1, int p2) //Copy p1 to p2
+{
+	preset_entry preset = preset_entry(gteams[gn_teamsel].presets[p1]);
+	gteams[gn_teamsel].presets[p2] = preset;
+	gteams[gn_teamsel].b_changed = true;
+	Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[gi_preset].fluid);
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+	if (!gteams[gn_teamsel].presets[gi_preset].fluid)
+	{
+		gi_formation = 0;
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+	}
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void swapPreset(int p1, int p2) //Swap p1 with p2
+{
+	preset_entry old_preset = preset_entry(gteams[gn_teamsel].presets[p1]);
+	gteams[gn_teamsel].presets[p1] = gteams[gn_teamsel].presets[p2];
+	gteams[gn_teamsel].presets[p2] = old_preset;
+	gteams[gn_teamsel].b_changed = true;
+	Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[gi_preset].fluid);
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+	if (!gteams[gn_teamsel].presets[gi_preset].fluid)
+	{
+		gi_formation = 0;
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+	}
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void copyFormation(int f1, int f2) //Copy f1 to f2
+{
+	formation_entry formation = formation_entry(gteams[gn_teamsel].presets[gi_preset].formations[f1]);
+	gteams[gn_teamsel].presets[gi_preset].formations[f2] = formation;
+	gteams[gn_teamsel].b_changed = true;
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void swapFormation(int f1, int f2) //Swap f1 with f2
+{
+	formation_entry old_formation = formation_entry(gteams[gn_teamsel].presets[gi_preset].formations[f1]);
+	gteams[gn_teamsel].presets[gi_preset].formations[f1] = gteams[gn_teamsel].presets[gi_preset].formations[f2];
+	gteams[gn_teamsel].presets[gi_preset].formations[f2] = old_formation;
+	gteams[gn_teamsel].b_changed = true;
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
 }
 
 
