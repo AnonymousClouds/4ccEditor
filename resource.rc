@@ -68,6 +68,54 @@ BEGIN
 	BEGIN
 		MENUITEM "&Export Tactics", IDM_TACT_NIGHTS
 		MENUITEM "&Import Tactics", IDM_TACT_NIGHTL
+		POPUP "&Copy Preset"
+		BEGIN
+			POPUP "&Copy Preset 1 To"
+			BEGIN
+				MENUITEM "&Preset 2", IDM_TACT_CPY1_2_P
+				MENUITEM "&Preset 3", IDM_TACT_CPY1_3_P
+			END
+			POPUP "&Copy Preset 2 To"
+			BEGIN
+				MENUITEM "&Preset 1", IDM_TACT_CPY2_1_P
+				MENUITEM "&Preset 3", IDM_TACT_CPY2_3_P
+			END
+			POPUP "&Copy Preset 3 To"
+			BEGIN
+				MENUITEM "&Preset 1", IDM_TACT_CPY3_1_P
+				MENUITEM "&Preset 2", IDM_TACT_CPY3_2_P
+			END
+		END
+		POPUP "&Swap Preset"
+		BEGIN
+			MENUITEM "&Swap Preset 1 and Preset 2", IDM_TACT_SWP1_2_P
+			MENUITEM "&Swap Preset 1 and Preset 3", IDM_TACT_SWP1_3_P
+			MENUITEM "&Swap Preset 2 and Preset 3", IDM_TACT_SWP2_3_P
+		END
+		POPUP "&Copy Formation"
+		BEGIN
+			POPUP "&Copy Kick-off To"
+			BEGIN
+				MENUITEM "&In-possession", IDM_TACT_CPY1_2_F
+				MENUITEM "&Out-of-possession", IDM_TACT_CPY1_3_F
+			END
+			POPUP "&Copy In-possession To"
+			BEGIN
+				MENUITEM "&Kick-off", IDM_TACT_CPY2_1_F
+				MENUITEM "&Out-of-possession", IDM_TACT_CPY2_3_F
+			END
+			POPUP "&Copy Out-of-possession To"
+			BEGIN
+				MENUITEM "&Kick-off", IDM_TACT_CPY3_1_F
+				MENUITEM "&In-possession", IDM_TACT_CPY3_2_F
+			END
+		END
+		POPUP "&Swap Formation"
+		BEGIN
+			MENUITEM "&Swap Kick-off and In-possession", IDM_TACT_SWP1_2_F
+			MENUITEM "&Swap Kick-off and Out-of-possession", IDM_TACT_SWP1_3_F
+			MENUITEM "&Swap In-possession and Out-of-possession", IDM_TACT_SWP2_3_F
+		END
 	END
 	POPUP "&Database"
     BEGIN
