@@ -268,12 +268,14 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
                 errorTot++;
 				errorMsg << _T("Has GK as second A position; ");
 			}
+
             cardMod -= (countA - 1);
         }
 
 		//Count cards
 		int numTrick = 0;
 		int numCom = 0;
+		int comMod = 0;
 		int numSkill;
 		if(pesVersion==19) numSkill=39;
 		else if(pesVersion>19) numSkill=41;
@@ -511,8 +513,15 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				targetRate2 += bronzeManletBonus;
 				targetRate3 += bronzeManletBonus;
 			}
+
+			//SPECIAL Autumn 26: Medals get either a free A pos or a COM style
+			if (numCom > bronzeCOM) //Increase the com mod by 1
+			{
+				comMod++;
+			}
+
 			cardMod += min(bronzeTrickCards, numTrick); //3 free tricks
-			cardMod += min(bronzeCOM, numCom); //1 free COM
+			cardMod += min(bronzeCOM + comMod, numCom); //1 free COM
 			//cardMod += min(1, (countA - 1)); //1 free A-position
 			cardLimit = bronzeSkillCards + cardMod; //4 skill cards
 
@@ -525,7 +534,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			if (eCheck)
 			{
 				if (numTrick < bronzeTrickCards) errorMsg << _T("WARN: Has ") << numTrick << _T(" trick cards, allowed ") << bronzeTrickCards << _T("; ");
-				if (numCom < bronzeCOM) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << bronzeCOM << _T("; ");
+				if (numCom < bronzeCOM + comMod) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << bronzeCOM + comMod << _T("; ");
 				if (player.injury + 1 < bronzeIR) errorMsg << _T("WARN: Has inj resist") << player.injury + 1 << _T(", allowed ") << bronzeIR << _T("; ");
 			}
 
@@ -575,8 +584,15 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				targetRate2 += silverManletBonus;
 				targetRate3 += silverManletBonus;
 			}
+
+			//SPECIAL Autumn 26: Medals get either a free A pos or a COM style
+			if (numCom > silverCOM) //Increase the com mod by 1
+			{
+				comMod++;
+			}
+
             cardMod += min(silverTrickCards, numTrick); //3 free tricks
-			cardMod += min(silverCOM, numCom); //1 free COM
+			cardMod += min(silverCOM + comMod, numCom); //1 free COM
 			//cardMod += min(1, (countA - 1)); //1 free A-position
 			cardLimit = silverSkillCards + cardMod; //4 skill cards
 
@@ -589,7 +605,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			if (eCheck)
 			{
 				if (numTrick < silverTrickCards) errorMsg << _T("WARN: Has ") << numTrick << _T(" trick cards, allowed ") << silverTrickCards << _T("; ");
-				if (numCom < silverCOM) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << silverCOM << _T("; ");
+				if (numCom < silverCOM + comMod) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << silverCOM + comMod << _T("; ");
 				if (player.injury + 1 < silverIR) errorMsg << _T("WARN: Has inj resist") << player.injury + 1 << _T(", allowed ") << silverIR << _T("; ");
 			}
 
@@ -650,9 +666,15 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			{
 				errorMsg << _T("Gold heights cannot exceed ") << heightGiant << _T("cm; ");
 			}
+
+			//SPECIAL Autumn 26: Medals get either a free A pos or a COM style
+			if (numCom > goldCOM) //Increase the com mod by 1
+			{
+				comMod++;
+			}
 			
             cardMod += min(goldTrickCards, numTrick); //4 free tricks
-			cardMod += min(goldCOM, numCom); //2 free COMs
+			cardMod += min(goldCOM + comMod, numCom); //2 free COMs
 			cardLimit = goldSkillCards + cardMod; //5 skill cards
            
 			if(player.injury+1 > goldIR)
@@ -666,7 +688,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				if (cardCount < 10)
 				{
 					if (numTrick < goldTrickCards) errorMsg << _T("WARN: Has ") << numTrick << _T(" trick cards, allowed ") << goldTrickCards << _T("; ");
-					if (numCom < goldCOM) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << goldCOM << _T("; ");
+					if (numCom < goldCOM + comMod) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << goldCOM + comMod << _T("; ");
 				}
 				if (player.injury + 1 < goldIR) errorMsg << _T("WARN: Has inj resist") << player.injury + 1 << _T(", allowed ") << goldIR << _T("; ");
 			}
@@ -693,6 +715,9 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			if (countA > 1) cardLimit += manletPosBonus; //Manlets get a bonus double A position
 			weakFootUse = manletWeakFootUse; //Manlets get weak foot acc/use 4/4
 			weakFootAcc = manletWeakFootAcc;
+
+			//SPECIAL Autumn 26: Medals can have either a free A or a free COM style
+			countA--;
 		}
 		else if ((player.height - heightMod) <= heightMid)
 		{
@@ -710,6 +735,12 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 		{
 			errorTot++;
 			errorMsg << _T("Illegal height (") << player.height << _T(" cm); ");
+		}
+
+		//SPECIAL Autumn 26: Medals get either a free A or a free COM style
+		if (comMod == 0 && rating >= bronzeRate-bronzeGiantPen && countA > 1)
+		{
+			cardLimit++;
 		}
 
 		//Check weak foot ratings
