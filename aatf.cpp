@@ -473,7 +473,8 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			}
 		}
 		/* BRONZE */
-		else if (rating < goldRate-goldGiantPen) //Bronze player
+		else if (rating < silverRate-silverGiantPen //Bronze player
+			|| (usingRed && player.height == heightManlet && rating == bronzeRate + bronzeManletBonus)) //Autumn 26 special
 		{
 			numBronze++;
 			targetRate = bronzeRate;
@@ -946,10 +947,15 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 	}
     
     //Check ability stats
-    if(numReg != (23-reqNumSilver-reqNumGold))
+    if(numReg != (23-reqNumBronze-reqNumSilver-reqNumGold))
     {
         errorTot++;
-        errorMsg << _T("Number of Regular players is ") << numReg << _T(", should be ") << 23-reqNumSilver-reqNumGold << _T("; ");
+        errorMsg << _T("Number of Regular players is ") << numReg << _T(", should be ") << 23-reqNumBronze-reqNumSilver-reqNumGold << _T("; ");
+    }
+    if(numSilver != reqNumBronze)
+    {
+        errorTot++;
+        errorMsg << _T("Number of Bronze medals is ") << numBronze << _T(", should be ") << reqNumBronze << _T("; ");
     }
     if(numSilver != reqNumSilver)
     {
