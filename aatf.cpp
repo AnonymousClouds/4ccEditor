@@ -454,7 +454,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			}*/
 
 			//SPECIAL Autumn 26: Red non-medals registered as CB's and set to CB on all presets can go up to 189 cm
-			if (usingRed && player.reg_pos == 1 && aatf_check_player_in_pos(gteams[teamSel], ii, 1, true))
+			if (usingRed && player.reg_pos == 1 && aatf_check_player_in_pos(gteams[teamSel], player, 1, true))
 			{
 				heightMod = 4;
 			}
@@ -1011,23 +1011,42 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 }
 
 //Exclusive: Check if player is ONLY in that position across all presets and formations
-bool aatf_check_player_in_pos(team_entry& team, int playerIndex, int position, bool exclusive)
+bool aatf_check_player_in_pos(team_entry& team, player_entry& player, int position, bool exclusive)
 {
 	bool isInPos = true;
+	bool isInStarting11 = false;
+	int playerIndex = 0;
 
-	for (int indexP = 0; indexP < 3; indexP++)
+	for (int ii = 0; ii < 11; ii++)
 	{
-		int formationCount = team.presets[indexP].fluid ? 1 : 3;
-		for (int indexF = 0; indexF < formationCount; indexF++)
+		if (player.id == (team.id * 1000) + 1 + team.starting11[ii])
 		{
-			int playerPos = team.presets[indexP].formations[indexF].players[playerIndex].pos;
-
-			//If not exclusive, return true if any player has that position in any preset or formation
-			if (!exclusive && playerPos == position)
-				return true;
-
-			isInPos = isInPos && team.presets[indexP].formations[indexF].players[playerIndex].pos == position;
+			isInStarting11 = true;
+			playerIndex = ii;
+			break;
 		}
+	}
+
+	if (isInStarting11)
+	{
+		for (int indexP = 0; indexP < 3; indexP++)
+		{
+			int formationCount = team.presets[indexP].fluid ? 1 : 3;
+			for (int indexF = 0; indexF < formationCount; indexF++)
+			{
+				int playerPos = team.presets[indexP].formations[indexF].players[playerIndex].pos;
+
+				//If not exclusive, return true if any player has that position in any preset or formation
+				if (!exclusive && playerPos == position)
+					return true;
+
+				isInPos = isInPos && team.presets[indexP].formations[indexF].players[playerIndex].pos == position;
+			}
+		}
+	}
+	else
+	{
+		return player.reg_pos == position;
 	}
 
 	return isInPos;
