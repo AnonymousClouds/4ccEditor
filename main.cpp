@@ -1095,6 +1095,28 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					}
 				}
 				break;
+				case IDB_MAKE_BRNZ:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						_itow_s(bronzeRate, buffer, 3, 10);
+						for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+							SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						_itow_s(bronzeForm, buffer, 3, 10);
+						SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						_itow_s(bronzeIR, buffer, 3, 10);
+						SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						_itow_s(bronzeWeakFootUse, buffer, 3, 10);
+						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						_itow_s(bronzeWeakFootAcc, buffer, 3, 10);
+						SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+					}
+				}
+				break;
 				case IDB_MAKE_REGU:
 				{
 					if(HIWORD(W)==BN_CLICKED)

@@ -42,33 +42,41 @@ int regPosToPlayPosMap[13] = { 12, 9, 10, 11, 5, 6, 7, 8, 4, 2, 3, 1, 0 };
 //============================
 //AATF Settings
 int manletBonus = 5;
-int silverManletBonus = 0;
+int bronzeManletBonus = 3;
+int silverManletBonus = 2;
 int goldManletBonus = 0;
+int bronzeGiantPen = 0;
 int silverGiantPen = 0;
 int goldGiantPen = 0;
 
 int goldRate = 99; //Player skill ratings
-int silverRate = 88;
+int silverRate = 92;
+int bronzeRate = 86;
 int regRate = 77;
-int gkRate = 74;
+int gkRate = 77;
 
-int reqNumGold = 2; //Numbers of medals
-int reqNumSilver = 3;
+int reqNumGold = 1; //Numbers of medals
+int reqNumSilver = 2;
+int reqNumBronze = 2;
 
 int goldForm = 8; //possible range 1-8
 int silverForm = 8;
+int bronzeForm = 8;
 int regForm = 4;
 
 int goldIR = 3; //Injury resistence (possible range 1-3)
 int silverIR = 3;
+int bronzeIR = 3;
 int regIR = 1;
 
-int goldWeakFootUse = 2; //Gold medal weak foot usage limit
-int silverWeakFootUse = 2;
+int goldWeakFootUse = 4; //Gold medal weak foot usage limit
+int silverWeakFootUse = 4;
+int bronzeWeakFootUse = 4;
 int regWeakFootUse = 2;
 
 int goldWeakFootAcc = 4; //Gold medal weak foot accuracy limit
 int silverWeakFootAcc = 4;
+int bronzeWeakFootAcc = 4;
 int regWeakFootAcc = 2;
 
 int manletCardBonus = 1; //Manlets get 1 extra card
@@ -78,22 +86,25 @@ int manletPosBonus = 1; //Manlets get 1 extra double A position
 
 int gkSkillCards = 2; //Skill cards
 int regSkillCards = 3;
-int silverSkillCards = 4;
-int goldSkillCards = 5;
+int bronzeSkillCards = 4;
+int silverSkillCards = 5;
+int goldSkillCards = 6;
 
 int gkTrickCards = 0; //Trick cards
 int regTrickCards = 2;
+int bronzeTrickCards = 3;
 int silverTrickCards = 3;
 int goldTrickCards = 3;
 
 int regCOM = 0; //COM playing styles
+int bronzeCOM = 1;
 int silverCOM = 1;
 int goldCOM = 2;
 
 int greenGiga = 0; //Green height bracket
-int greenGiant = 5;
+int greenGiant = 6;
 int greenTall = 6;
-int greenMid = 6;
+int greenMid = 5;
 int greenManlet = 6;
 
 int redGiga = 0; //Red height bracket
@@ -124,6 +135,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 	int numGK = 0;
 	//Count of player ratings
 	int numReg = 0;
+	int numBronze = 0;
 	int numSilver = 0;
 	int numGold = 0;
 	//Count of height brackets
@@ -338,7 +350,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 		}
 
 		/* REGULAR */
-		if(rating < silverRate-silverGiantPen) //Regular player
+		if(rating < bronzeRate-bronzeGiantPen) //Regular player
         {
             numReg++;
 			targetRate = regRate;
@@ -439,6 +451,12 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				heightMod = 5;
 			}*/
 
+			//SPECIAL Autumn 26: Red non-medals registered as CB's and set to CB on all presets can go up to 189 cm
+			if (usingRed && player.reg_pos == 1 && aatf_check_player_in_pos(gteams[teamSel], ii, 1, true))
+			{
+				heightMod = 4;
+			}
+
 			if (eCheck)
 			{
 				if (player.reg_pos == 0)
@@ -453,6 +471,70 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				}
 				if (player.injury + 1 < regIR) errorMsg << _T("WARN: Has inj resist") << player.injury + 1 << _T(", allowed ") << regIR << _T("; ");
 			}
+		}
+		/* BRONZE */
+		else if (rating < goldRate-goldGiantPen) //Bronze player
+		{
+			numBronze++;
+			targetRate = bronzeRate;
+			targetRate2 = bronzeRate;
+			targetRate3 = bronzeRate;
+
+			weakFootUse = bronzeWeakFootUse;
+			weakFootAcc = bronzeWeakFootAcc;
+
+			if (numBronze > reqNumBronze)
+			{
+				errorTot++;
+				errorMsg << _T("Too many Bronze medals; ");
+			}
+			if (player.form+1 != bronzeForm)
+			{
+				errorTot++;
+				errorMsg << _T("Form is ") << player.form+1 << _T(", should be ") << bronzeForm << _T("; ");
+			}
+			if (player.reg_pos == 0) //Medals can't be GK
+			{
+				errorTot++;
+				errorMsg << _T("Medals cannot play as GK; ");
+			}
+			if (player.height >= heightGiant) //HA get penalty
+			{
+				targetRate -= bronzeGiantPen;
+				targetRate2 -= bronzeGiantPen;
+				targetRate3 -= bronzeGiantPen;
+			}
+			else if (player.height <= heightManlet && usingRed)
+			{
+				targetRate += bronzeManletBonus;
+				targetRate2 += bronzeManletBonus;
+				targetRate3 += bronzeManletBonus;
+			}
+			cardMod += min(bronzeTrickCards, numTrick); //3 free tricks
+			cardMod += min(bronzeCOM, numCom); //1 free COM
+			//cardMod += min(1, (countA - 1)); //1 free A-position
+			cardLimit = bronzeSkillCards + cardMod; //4 skill cards
+
+			if (player.injury+1 > bronzeIR)
+			{
+				errorTot++;
+				errorMsg << _T("Injury resist is ") << player.injury+1 << _T(", should be ") << bronzeIR << _T("; ");
+			}
+
+			if (eCheck)
+			{
+				if (numTrick < bronzeTrickCards) errorMsg << _T("WARN: Has ") << numTrick << _T(" trick cards, allowed ") << bronzeTrickCards << _T("; ");
+				if (numCom < bronzeCOM) errorMsg << _T("WARN: Has ") << numCom << _T(" COM cards, allowed ") << bronzeCOM << _T("; ");
+				if (player.injury + 1 < bronzeIR) errorMsg << _T("WARN: Has inj resist") << player.injury + 1 << _T(", allowed ") << bronzeIR << _T("; ");
+			}
+
+
+			//SPECIAL FAG13: Medals can trade a card for 4/4 footedness
+			/*if (player.weak_use + 1 > weakFootUse)
+			{
+				weakFootUse = 4;
+				cardLimit--;
+			}*/
 		}
 		/* SILVER */
         else if(rating < goldRate-goldGiantPen) //Silver player
@@ -516,6 +598,13 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 				weakFootUse = 4;
 				cardLimit--;
 			}*/
+
+			//SPECIAL Autumn 26: Greens can have silver 194cms, but with a -3 stat penalty
+			if (!usingRed && player.height == heightGiant && rating > silverRate - 3)
+			{
+				errorTot++;
+				errorMsg << _T("Illegal Ability scores: 194cm Silvers can only have ") << silverRate - 3 << _T(" ratings; ");
+			}
         }
 		/* GOLD */
         else //rating == 99 //Gold player
@@ -882,4 +971,27 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 		SendDlgItemMessage(hAatfbox, IDB_AATFOK, WM_SETTEXT, 0, (LPARAM) _T("Alright, get their clothes"));
 	else
 		SendDlgItemMessage(hAatfbox, IDB_AATFOK, WM_SETTEXT, 0, (LPARAM) _T("GO TEAM EXPORT!"));
+}
+
+//Exclusive: Check if player is ONLY in that position across all presets and formations
+bool aatf_check_player_in_pos(team_entry& team, int playerIndex, int position, bool exclusive)
+{
+	bool isInPos = true;
+
+	for (int indexP = 0; indexP < 3; indexP++)
+	{
+		int formationCount = team.presets[indexP].fluid ? 1 : 3;
+		for (int indexF = 0; indexF < formationCount; indexF++)
+		{
+			int playerPos = team.presets[indexP].formations[indexF].players[playerIndex].pos;
+
+			//If not exclusive, return true if any player has that position in any preset or formation
+			if (!exclusive && playerPos == position)
+				return true;
+
+			isInPos = isInPos && team.presets[indexP].formations[indexF].players[playerIndex].pos == position;
+		}
+	}
+
+	return isInPos;
 }
