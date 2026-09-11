@@ -166,6 +166,9 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
 			break;
 		}
 	}
+
+	//Autumn 26 special
+	silverGiantPen = usingRed ? 0 : 3;
     
 	//Now check each player for errors
     int errorTot = 0;
