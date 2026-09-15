@@ -6968,6 +6968,9 @@ void import_squad(HWND hwnd)
 
 			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21))
 			{
+				int pos = num_on_team * sizeof(player_export) + (2 * gteams[0].team_max) + 5;
+				input_file.seekg(pos);
+				//Set the positions, in case the first two options were unchecked
 				for (int teamIndex = 0; teamIndex < gnum_teams; teamIndex++)
 				{
 					int teamId = gteams[gn_teamCbIndToArray[csel]].id;
