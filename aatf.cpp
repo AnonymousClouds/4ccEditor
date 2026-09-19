@@ -986,7 +986,7 @@ void aatf_single(HWND hAatfbox, int pesVersion, int teamSel, player_entry* gplay
         errorTot++;
         errorMsg << _T("Number of Regular players is ") << numReg << _T(", should be ") << 23-reqNumBronze-reqNumSilver-reqNumGold << _T("; ");
     }
-    if(numSilver != reqNumBronze)
+    if(numBronze != reqNumBronze)
     {
         errorTot++;
         errorMsg << _T("Number of Bronze medals is ") << numBronze << _T(", should be ") << reqNumBronze << _T("; ");
@@ -1022,7 +1022,7 @@ bool aatf_check_player_in_pos(team_entry& team, player_entry& player, int positi
 
 	for (int ii = 0; ii < 11; ii++)
 	{
-		if (player.id == (team.id * 1000) + 1 + team.starting11[ii])
+		if (player.id == (team.id * 100) + 1 + team.starting11[ii])
 		{
 			isInStarting11 = true;
 			playerIndex = ii;
@@ -1034,7 +1034,7 @@ bool aatf_check_player_in_pos(team_entry& team, player_entry& player, int positi
 	{
 		for (int indexP = 0; indexP < 3; indexP++)
 		{
-			int formationCount = team.presets[indexP].fluid ? 1 : 3;
+			int formationCount = team.presets[indexP].fluid ? 3 : 1;
 			for (int indexF = 0; indexF < formationCount; indexF++)
 			{
 				int playerPos = team.presets[indexP].formations[indexF].players[playerIndex].pos;
