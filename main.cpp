@@ -7607,6 +7607,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 					gplayers[jj].tight_pos = 77;
 					gplayers[jj].aggres = 77;
 					gplayers[jj].phys_cont = 77;
+					gplayers[jj].b_changed = true;
 					break;
 				}
 			}
@@ -7679,6 +7680,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 					gplayers[jj].tight_pos = 77;
 					gplayers[jj].aggres = 77;
 					gplayers[jj].phys_cont = 77;
+					gplayers[jj].b_changed = true;
 					break;
 				}
 			}
@@ -7715,6 +7717,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 					}
 					gplayers[jj].tight_pos = 77;
 					gplayers[jj].aggres = 77;
+					gplayers[jj].b_changed = true;
 					break;
 				}
 			}
@@ -7788,6 +7791,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 					else if (pesVersion == 20 || pesVersion == 21) fill_player_entry20_texport(gplayers[jj], playersPos, contents);
 					else return; //How did you get here?
 
+					gplayers[jj].b_changed = true;
 					break;
 				}
 			}
