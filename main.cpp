@@ -7575,6 +7575,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	int ii, jj, kk, num_on_team, current_byte;
 
 	void* descriptor;
+	const uint8_t* masterKey;
 
 	if (pesVersion == 15)
 	{
@@ -7648,9 +7649,9 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	else if (pesVersion == 16)
 	{
 		descriptor = (void*)createFileDescriptorOld();
-		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
+		masterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
 		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(masterKey));
 
 		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
 		current_byte = 0x10298;
@@ -7686,9 +7687,9 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	else if (pesVersion == 17)
 	{
 		descriptor = (void*)createFileDescriptorOld();
-		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
+		masterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
 		uint8_t* pfin = readFile(pcs_file_name, NULL);
-		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(masterKey));
 
 		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
 		current_byte = 0x10330;
@@ -7911,6 +7912,7 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	else
 		destroyFileDescriptor15((FileDescriptor15*)descriptor);
 	descriptor = NULL;
+	masterKey = NULL;
 
 	init_tactics_tab();
 
