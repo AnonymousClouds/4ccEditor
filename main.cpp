@@ -7909,11 +7909,9 @@ void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
 	}
 
 	//Delete teh file descriptor, so that we don't overwrite it li
-	if (pesVersion>=18)
-		destroyFileDescriptorNew((FileDescriptorNew*)descriptor);
-	else if (pesVersion >= 16)
+	if (pesVersion == 16 || pesVersion == 17)
 		destroyFileDescriptorOld((FileDescriptorOld*)descriptor);
-	else
+	else if (pesVersion == 15)
 		destroyFileDescriptor15((FileDescriptor15*)descriptor);
 	descriptor = NULL;
 	masterKey = NULL;
