@@ -1315,6 +1315,10 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 			weakFootAcc = globalStats::manlet_foot_acc == 0 ? weakFootAcc : globalStats::manlet_foot_acc;
 			weakFootUse = globalStats::manlet_foot_usage == 0 ? weakFootUse : globalStats::manlet_foot_usage;
 		}
+		else {
+			errorTot++;
+			errorMsg << _T("Illegal height (") << player.height << _T(" cm); ");
+		}
 
 		/* GOALKEEPER */
 		if (player.reg_pos == 0) //Goalkeeper player, counts towards regular
