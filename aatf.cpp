@@ -1214,7 +1214,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 					cardMod++;
 				}
 				//Trick cards may be free, count number
-				if (jj < 7 || jj == 16 || jj == 21 || jj == 28 || jj == 29 || jj == 30 || jj == 34)
+				if (jj < 6 || jj == 16 || jj == 21 || jj == 28 || jj == 29 || jj == 30 || jj == 34)
 				{
 					hasTrick = true;
 					numTrick++;
