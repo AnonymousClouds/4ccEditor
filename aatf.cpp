@@ -1498,7 +1498,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 			cardMod += min(coms, numCom); //2 free COM
 			cardLimit = skills + cardMod; //8 skill cards
 
-			if (player.injury + 1 > injury_resistance)
+			if (player.injury + 1 != injury_resistance)
 			{
 				errorTot++;
 				errorMsg << _T("\tInjury resist is ") << player.injury + 1 << _T(", should be ") << injury_resistance << _T(";\r\n");
@@ -1568,7 +1568,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 			cardMod += min(coms, numCom); //2 free COM
 			cardLimit = skills + cardMod; //8 skill cards
 
-			if (player.injury + 1 > injury_resistance)
+			if (player.injury + 1 != injury_resistance)
 			{
 				errorTot++;
 				errorMsg << _T("\tInjury resist is ") << player.injury + 1 << _T(", should be ") << injury_resistance << _T(";\r\n");
@@ -1638,7 +1638,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 			cardMod += min(coms, numCom); //2 free COMs
 			cardLimit = skills + cardMod; //8 skill cards
 
-			if (player.injury + 1 > injury_resistance)
+			if (player.injury + 1 != injury_resistance)
 			{
 				errorTot++;
 				errorMsg << _T("\tInjury resist is ") << player.injury + 1 << _T(", should be ") << injury_resistance << _T(";\r\n");
