@@ -1724,14 +1724,14 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 		//Run over every on-field player, if they aren't registered to one of their positions add an error
 		bool isInPosition = false;
 		for (int index = 0; index < 23; index++) {
-			if (aatf_check_player_in_pos(gteams[teamSel], player, player.reg_pos, 0)) {//Make sure they are in their registered position at some point
+			if (aatf_check_player_in_pos_first_preset(gteams[teamSel], player, player.reg_pos, 0)) {//Make sure they are in their registered position at some point
 				isInPosition = true;
 				break;
 			}
 		}
 		if (!isInPosition) {
 			errorTot++;
-			errorMsg << _T("\tPlayer is a registered ") << aatf_get_position_name_from_byte(player.reg_pos) << _T(" but is not in that position in any Game Plan\r\n");
+			errorMsg << _T("\tPlayer is a registered ") << aatf_get_position_name_from_byte(player.reg_pos) << _T(" but is not in that position in the first preset\r\n");
 		}
 
 		//Check player overall rating
@@ -2028,6 +2028,41 @@ bool aatf_check_player_in_pos(team_entry& team, player_entry& player, int positi
 				isInPos = isInPos && team.presets[indexP].formations[indexF].players[playerIndex].pos == position;
 			}
 		}
+	}
+	else
+	{
+		return player.reg_pos == position;
+	}
+
+	return isInPos;
+}
+
+//Exclusive: Check if player is ONLY in that position in the first preset
+bool aatf_check_player_in_pos_first_preset(team_entry& team, player_entry& player, int position, bool exclusive)
+{
+	bool isInPos = true;
+	bool isInStarting11 = false;
+	int playerIndex = 0;
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		if (player.id == (team.id * 100) + 1 + team.starting11[ii])
+		{
+			isInStarting11 = true;
+			playerIndex = ii;
+			break;
+		}
+	}
+
+	if (isInStarting11)
+	{
+		int playerPos = team.presets[0].formations[0].players[playerIndex].pos;
+
+		//If not exclusive, return true if any player has that position in any preset or formation
+		if (!exclusive && playerPos == position)
+			return true;
+
+		isInPos = isInPos && team.presets[0].formations[0].players[playerIndex].pos == position;
 	}
 	else
 	{
