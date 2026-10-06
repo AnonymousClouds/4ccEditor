@@ -1961,12 +1961,12 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 	if (numGiga != globalStats::allowedColossal)
 	{
 		errorTot++;
-		errorMsg << _T("\tNumber of ") << globalStats::heightColossal << _T(" players is ") << numTall << _T(". Should be ") << globalStats::allowedColossal << _T(";\r\n");
+		errorMsg << _T("\tNumber of ") << globalStats::heightColossal << _T(" players is ") << numGiga << _T(". Should be ") << globalStats::allowedColossal << _T(";\r\n");
 	}
 	if (numGiant != globalStats::allowedGiant)
 	{
 		errorTot++;
-		errorMsg << _T("\tNumber of ") << globalStats::heightGiant << _T(" players is ") << numTall << _T(". Should be ") << globalStats::allowedGiant << _T(";\r\n");
+		errorMsg << _T("\tNumber of ") << globalStats::heightGiant << _T(" players is ") << numGiant << _T(". Should be ") << globalStats::allowedGiant << _T(";\r\n");
 	}
 	if (numTall != globalStats::allowedTall)
 	{
@@ -1976,12 +1976,12 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 	if (numMid != globalStats::allowedMid)
 	{
 		errorTot++;
-		errorMsg << _T("\tNumber of ") << globalStats::heightMid << _T(" players is ") << numTall << _T(". Should be ") << globalStats::allowedMid << _T(";\r\n");
+		errorMsg << _T("\tNumber of ") << globalStats::heightMid << _T(" players is ") << numMid << _T(". Should be ") << globalStats::allowedMid << _T(";\r\n");
 	}
 	if (numManlet != globalStats::allowedManlet)
 	{
 		errorTot++;
-		errorMsg << _T("\tNumber of ") << globalStats::heightManlet << _T(" players is ") << numTall << _T(". Should be ") << globalStats::allowedManlet << _T(";\r\n");
+		errorMsg << _T("\tNumber of ") << globalStats::heightManlet << _T(" players is ") << numManlet << _T(". Should be ") << globalStats::allowedManlet << _T(";\r\n");
 	}
 	if (errorMsg.rdbuf()->in_avail()) errorMsg << _T("\r\n");
 	errorMsg << _T("\r\nErrors: ") << errorTot << _T("\r\n");
