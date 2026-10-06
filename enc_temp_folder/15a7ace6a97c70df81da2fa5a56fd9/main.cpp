@@ -1,0 +1,9651 @@
+/*Header files and preprocessor directives*/
+
+#include "resource.h"
+#include "editor.h"
+#include "window.h"
+#include "aatf.h"
+#include <string>
+#include <Windows.h>
+#pragma comment(lib, "Winmm.lib")
+#include <mmsystem.h>
+#include "stats.h"
+
+//----------------------------------------------------------------------
+/*Function prototypes*/
+/*
+//Dialog procedures: (Now in window.h)
+LRESULT CALLBACK wnd_proc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK aatf_sing_dlg_proc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK aatf_mult_dlg_proc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK aatf_sel_dlg_proc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK aatf_comp_dlg_proc(HWND, UINT, WPARAM, LPARAM);
+//BOOL CALLBACK tab_two_dlg_proc(HWND, UINT, WPARAM, LPARAM);
+
+//Control procedures: (Now in window.h)
+LRESULT CALLBACK lv_cntl_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK cb_cntl_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK cb2_cntl_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK scale_cntl_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK scale_static_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK onto_tab_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK from_tab_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK tab_two_dlg_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+LRESULT CALLBACK tab_three_dlg_proc(HWND,UINT,WPARAM,LPARAM,UINT_PTR,DWORD_PTR);
+BOOL CALLBACK statDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK bumpDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK scale_children(HWND,LPARAM);
+BOOL CALLBACK draw_children(HWND,LPARAM);
+*/
+int loadDLL();
+int DoFileOpen(HWND, int, TCHAR* = NULL);
+void DoFileSave(HWND);
+void data_handler(const TCHAR *, int);
+void save_handler(const TCHAR *);
+int open_texport(HWND, int, TCHAR* = NULL);
+void handle_texport(const TCHAR*, int);
+
+void player_names_to_positions();
+
+void export_squad(HWND);
+void import_squad(HWND);
+void export_nightly(HWND);
+void import_nightly(HWND);
+
+void save_tactical_data(std::ofstream&, int);
+void load_tactical_data(std::ifstream&, int, int);
+
+void extract_player_entry(player_entry, int &);
+
+void extract_team_info(team_entry, int &);
+void extract_teamplayer_info(team_entry, int &);
+
+void show_player_info(int);
+player_entry get_form_player_info(int);
+bool get_form_team_info(int, team_entry &);
+void fill_list_all_players();
+void make_pony_phys();
+void trim_team();
+void team_vis_clear();
+void team_created_set();
+void team_fpc_on();
+void team_fpc_off();
+void fpc_toggle();
+void toggle_hid();
+void set_stats();
+void bump_stats();
+void copy_stats();
+void set_boot_glove_ids();
+void swap_stats();
+//void setup_control(HWND,HFONT,SUBCLASSPROC); (Now in window.h)
+//void setup_combo(HWND,HFONT,SUBCLASSPROC);
+void common_shortcuts(WPARAM);
+void roster_data_output();
+void fix_database();
+void scroll_player_up();
+void scroll_player_down();
+void update_tables();
+void toggle_tactics(bool b_enable);
+void init_tactics_tab();
+void populate_tactics_tab(int teamOffset, int preset, int formation, bool rebuildPlayerLists = false, bool preserveSelectedPlayer = false);
+void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y, bool change_name = true, bool change_pos = true);
+void update_backline(int teamOffset);
+wchar_t* get_position_name_from_byte(byte pos);
+byte translate_adv_instruction(byte, int pesVersion = -1); //Standardize the advance instruction for import tactics between versions
+byte get_translated_adv_instruction(byte); //Reconverts the translated instruction to an appropriate one for the current version
+RECT create_rect(int x, int y, int width, int height);
+void copyPreset(int p1, int p2);
+void swapPreset(int p1, int p2);
+void copyFormation(int f1, int f2);
+void swapFormation(int f1, int f2);
+
+void SD_OnHVScroll(HWND hwnd, int bar, UINT code);
+void SD_ScrollClient(HWND hwnd, int bar, int pos);
+int SD_GetScrollPos(HWND hwnd, int bar, UINT code);
+
+//----------------------------------------------------------------------
+/*Global variables*/
+char gc_ver4ccs[] = "21a";
+char gc_ver4cct[] = "001";
+HINSTANCE ghinst;			//Main window instance
+HINSTANCE hPesDecryptDLL;	//Handle to libpesXcrypter.dll 
+HINSTANCE hPes15DecryptDLL;	//Handle to libpes15crypter.dll 
+HWND ghw_main;				//Handle to main window
+HWND ghw_tabcon, ghw_tab1, ghw_tab2, ghw_tab3, ghw_tab4;
+HFONT ghFont;
+HWND ghw_stat=NULL, ghw_bump=NULL, ghw_copy=NULL, ghw_import=NULL, ghw_swap = NULL, ghw_boglo=NULL;
+HWND ghw_DlgCurrent = NULL;
+HWND ghAatfbox=NULL;
+void* ghdescriptor = NULL; //void, cast as FileDescriptorOld, FileDescriptorNew, or FileDescriptor15 depending on version
+player_entry* gplayers = NULL;
+int* gn_playind = NULL; //positions in gplayers array of each item in player listbox
+team_entry* gteams = NULL;
+int* gn_teamCbIndToArray = NULL; //positions in gteams array of each item in team combobox
+int* gn_teamArrayIndToCb = NULL; //vice versa
+int gnum_players, gnum_teams, gn_listsel=-1, gn_teamsel=-1, gn_forceupdate=-1;
+bool gb_forceupdate = false;
+bool gb_firstsave = true;
+bool gb_importStats = true, gb_importAes = true, gb_importTact = true; //Squad import options
+int gn_oldysize = 642;
+int g_prevx=0;
+int giPesVersion = 0;
+int g_bumpAmount = 0;
+bool vglmode = true;
+const uint8_t* gpMasterKey;
+int gi_preset, gi_formation, gi_selected_player_field = -1, gi_selected_player_bench = -1;
+bool gb_tactics_enabled = false;
+bool gb_updating_tactics = false; //To prevent the EN_CHANGE doing things when its triggered programattically
+//MouseDrag stuff for the tactics tab
+bool gb_is_dragging = false;
+int gi_drag_x = -1, gi_drag_y = -1;
+
+appearance_map g_umap_pid_to_startByte; //Map from player ID to start byte of appearance entry
+
+int gi_lastAbility = IDC_ABIL_AGGR; //Final control ID in list of Player Ability, for looping over them
+
+//Brushes
+HBRUSH gTeamColor1 = NULL;
+HBRUSH gTeamColor2 = NULL;
+HBRUSH g_hbr = NULL;
+
+pf_createFileDescriptorOld createFileDescriptorOld;
+pf_createFileDescriptorNew createFileDescriptorNew;
+pf_destroyFileDescriptorOld destroyFileDescriptorOld;
+pf_destroyFileDescriptorNew destroyFileDescriptorNew;
+pf_decryptWithKeyOld decryptWithKeyOld;
+pf_decryptWithKeyNew decryptWithKeyNew;
+pf_encryptWithKeyOld encryptWithKeyOld;
+pf_encryptWithKeyNew encryptWithKeyNew;
+
+pf_createFileDescriptor15 createFileDescriptor15;
+pf_destroyFileDescriptor15 destroyFileDescriptor15;
+pf_decryptFile15 decryptFile15;
+pf_encryptFile15 encryptFile15;
+
+//The TCHAR-version of a user-provided entry point for a graphical 
+//  Windows-based application.
+// I 	[in] A handle to the current instance of the application
+// PI	[in] A handle to the previous instance of the application. This 
+//				parameter is always NULL
+// CL	[in] The command line for the program, excluding the program name
+// SC	[in] Controls how the window is to be shown
+int APIENTRY _tWinMain(HINSTANCE I, HINSTANCE PI, LPTSTR CL, int SC)
+{
+	ghinst = I; //Global handle to the program instance
+	
+	WNDCLASSEX wc;
+	MSG msg;
+
+	//Create brush for painting main window background so it will match the bg color of the tabs and dialog boxes on all systems
+	COLORREF bkColor = (COLORREF)GetSysColor(COLOR_3DFACE);
+	g_hbr = (HBRUSH)CreateSolidBrush(bkColor);
+
+	wc.cbSize		 = sizeof(WNDCLASSEX);
+	wc.style		 = 0;
+	wc.lpfnWndProc	 = wnd_proc;
+	wc.cbClsExtra	 = 0;
+	wc.cbWndExtra	 = 0;
+	wc.hInstance	 = I;
+	wc.hIcon		 = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor		 = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = g_hbr;
+	wc.lpszMenuName  = MAKEINTRESOURCE(IDR_MAINMENU);
+	wc.lpszClassName = _T("4cc_app");
+	wc.hIconSm		 = LoadIcon(NULL, IDI_APPLICATION);
+
+	if(!RegisterClassEx(&wc))
+	{
+		MessageBox(NULL, _T("Window Registration Failed!"), _T("Error!"),
+			MB_ICONEXCLAMATION | MB_OK);
+		return 0;
+	}
+
+	//Load libpesXcrypter.dll and its functions
+	int retval = loadDLL();
+	if(retval) return retval;
+
+	if (vglmode) {
+		ghw_main = CreateWindowEx(
+			0,
+			wc.lpszClassName,
+			_T("4ccEditor VGL 27 Edition (Version A)"),
+			WS_OVERLAPPEDWINDOW,
+			20, 20, 1320 + 144, 700,
+			NULL, NULL, ghinst, NULL);
+	}
+	else {
+		ghw_main = CreateWindowEx(
+			0,
+			wc.lpszClassName,
+			_T("4ccEditor Autumn 25 Edition (Version B)"),
+			WS_OVERLAPPEDWINDOW,
+			20, 20, 1320 + 144, 700,
+			NULL, NULL, ghinst, NULL);
+	}
+
+	if(ghw_main == NULL)
+	{
+		MessageBox(NULL, _T("Window Creation Failed!"), _T("Error!"),
+			MB_ICONEXCLAMATION | MB_OK);
+		return 0;
+	}
+
+	srand(time(NULL));
+
+	ShowWindow(ghw_main, SC);
+	UpdateWindow(ghw_main);
+
+	while(GetMessage(&msg, NULL, 0, 0) > 0)
+	{
+		if( !IsDialogMessage(ghw_main, &msg) )
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+	return msg.wParam;
+}
+
+//Message loop for the main window
+LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
+{
+	switch(M)
+	{
+		case WM_CREATE:
+		{
+			int ii;
+
+			//Initialize common controls so we can use tabbed page, 
+			// tooltip, and progress bar controls
+			INITCOMMONCONTROLSEX ix;
+			ix.dwSize = sizeof(INITCOMMONCONTROLSEX);
+			ix.dwICC = ICC_TAB_CLASSES | ICC_PROGRESS_CLASS;			
+			InitCommonControlsEx(&ix); 
+
+			//AATF Dialog box
+			ghAatfbox = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF), H, aatf_sing_dlg_proc);
+
+			HICON hi_big = (HICON)LoadImage(ghinst, MAKEINTRESOURCE(IDI_4CC_MED), IMAGE_ICON, 48, 48, NULL);
+			HICON hi_sml = (HICON)LoadImage(ghinst, MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, NULL);
+			SendMessage(H, WM_SETICON, ICON_BIG, (LPARAM)hi_big);
+			SendMessage(H, WM_SETICON, ICON_SMALL, (LPARAM)hi_sml);
+
+			HFONT hfDefault;
+			HWND hw_new;
+			HWND hw_bud;
+
+			RECT *chd_rect;
+
+			hfDefault = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+
+			ghFont = CreateFont(15,0,0,0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+                CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Segoe UI"));
+
+			hw_new = CreateWindowEx(0,_T("SCROLLBAR"),(PTSTR) NULL, WS_CHILD | SBS_HORZ, 
+				0, 642-18, 1102, 18, H, (HMENU)IDC_HSCROLL, GetModuleHandle(NULL), (PVOID) NULL);
+
+			RECT rc = {};
+			GetClientRect(H, &rc);
+			const SIZE sz = { rc.right - rc.left, rc.bottom - rc.top };
+			SCROLLINFO si = {};
+			si.cbSize = sizeof(SCROLLINFO);
+			si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
+			si.nPos = si.nMin = 1;
+
+			si.nMax = sz.cx;
+			si.nPage = sz.cx;
+			SetScrollInfo(hw_new, SB_HORZ, &si, FALSE);
+
+			//In window.cpp:
+			setup_main(H);
+			setup_tab1(H);
+			setup_tab2(H);
+			setup_tab3(H);
+			setup_tab4(H);
+
+			int x1, x2, y1;
+			x1 = GetSystemMetrics(SM_CXSCREEN);
+			y1 = GetSystemMetrics(SM_CYSCREEN); //1120, 700
+
+			if(y1<700)
+			{
+				x2 = y1/700*1120;
+				if(x2>x1) x2=x1;
+				SetWindowPos(H,0,0,0,x2,y1,SWP_NOZORDER);
+			}
+
+			SetFocus(GetDlgItem(H, IDC_TEAM_LIST));
+		}
+		break;
+		case WM_SIZE:
+		{
+			RECT rcClient;
+			resize_info ri;
+
+			GetClientRect(H, &rcClient);
+			//GetWindowRect(H, &rcClient);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&rcClient, 2);
+
+			//hEdit = GetDlgItem(H, IDC_MAIN_EDIT);
+			//SetWindowPos(hEdit, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER);
+			//float scale = (float)(rcClient.bottom-rcClient.top)/700.0;
+			ri.scale = (float)(rcClient.bottom-rcClient.top)/642.0;
+			int font_height = ceil(ri.scale*15.0);
+			DeleteObject((HGDIOBJ)ghFont);
+			ghFont = CreateFont(font_height,0,0,0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+                CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Segoe UI"));
+
+			HWND hscroll = GetDlgItem(H, IDC_HSCROLL);
+			SetWindowPos(hscroll, 0, rcClient.left, rcClient.bottom - 18, rcClient.right, 18, 
+					SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			const SIZE sz = { rcClient.right - rcClient.left, rcClient.bottom - rcClient.top };
+
+			if( !(W != SIZE_RESTORED && W != SIZE_MAXIMIZED) )
+			{
+				//----------------
+				
+				SCROLLINFO si = {};
+				si.cbSize = sizeof(SCROLLINFO);
+
+				si.fMask = SIF_PAGE | SIF_RANGE;
+				si.nPage = sz.cx;
+				si.nMax = 1104*ri.scale;
+				SetScrollInfo(hscroll, SB_CTL, &si, TRUE);
+
+				si.fMask = SIF_RANGE | SIF_POS;
+				GetScrollInfo(hscroll, SB_CTL, &si);
+
+				const int maxScrollPos = si.nMax - (sz.cx - 1);
+
+				// Scroll client only if scroll bar is visible and window's
+				// content is fully scrolled toward right and/or bottom side.
+				// Also, update window's content on maximize.
+				const bool needToScroll =
+					(si.nPos != si.nMin && si.nPos == maxScrollPos) ||
+					(W == SIZE_MAXIMIZED);
+
+				if(needToScroll)
+				{
+					SD_ScrollClient(hscroll, SB_CTL, si.nPos);
+				}
+				//---------------------
+
+				if( (float)sz.cx/(float)sz.cy< 1.718 ) ShowWindow(hscroll, SW_SHOW);
+				else ShowWindow(hscroll, SW_HIDE);
+
+				//ri.hdefer = BeginDeferWindowPos(500);
+				EnumChildWindows(H, scale_children, (LPARAM)&ri); 
+				//EndDeferWindowPos(ri.hdefer);
+				EnumChildWindows(H, draw_children, (LPARAM)0); 
+
+				InvalidateRect(H,NULL,true);
+
+				if ((gb_tactics_enabled) && gi_preset != -1 && gi_formation != -1)
+				{
+					populate_tactics_tab((gteams[gn_teamsel].id * 100) + 1, gi_preset, gi_formation);
+				}
+			}
+		}
+		break;
+		case WM_HSCROLL:
+		{
+			SD_OnHVScroll(GetDlgItem(H, IDC_HSCROLL), SB_CTL, LOWORD(W));
+		}
+		break;
+		case WM_DRAWITEM:
+		{
+			LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)L; // item drawing information
+			HWND hTabCtrl = GetDlgItem(H, IDC_TAB_MAIN);
+			TCITEM tci;
+			TCHAR szTabText[30];
+			HBRUSH hbr;
+			COLORREF bkColor;
+
+			if (hTabCtrl == lpdis->hwndItem)   // is this the tab control?
+			{
+				bkColor = (COLORREF)GetSysColor(COLOR_3DFACE);
+				hbr = (HBRUSH)CreateSolidBrush(bkColor);
+			
+				memset(szTabText, '\0', sizeof(szTabText));
+				tci.mask = TCIF_TEXT;
+				tci.pszText = szTabText;
+				tci.cchTextMax = 29;
+
+				TabCtrl_GetItem(hTabCtrl, lpdis->itemID, &tci);
+
+				FillRect(lpdis->hDC, &lpdis->rcItem, hbr);
+				SetBkColor(lpdis->hDC, bkColor);
+
+				//RECT rctext = lpdis->rcItem;
+				//rctext.top -= GetSystemMetrics(SM_CYEDGE);
+				//rctext.left += GetSystemMetrics(SM_CXEDGE);
+
+				//int test = TabCtrl_GetCurSel(hTabCtrl);
+
+				//TextOut(lpdis->hDC,rctext.left,rctext.top,tci.pszText,lstrlen(tci.pszText));
+				if( lpdis->itemID == TabCtrl_GetCurSel(hTabCtrl) )
+					DrawText(lpdis->hDC, tci.pszText, lstrlen(tci.pszText), &lpdis->rcItem, DT_SINGLELINE|DT_VCENTER|DT_CENTER);
+				else
+					DrawText(lpdis->hDC, tci.pszText, lstrlen(tci.pszText), &lpdis->rcItem, DT_SINGLELINE|DT_BOTTOM|DT_CENTER);
+
+				DeleteObject(hbr);
+			}
+		}
+		break;
+		case WM_KEYDOWN:
+		{
+			//When P key is pressed
+			if( W == 0x50 && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) )
+			{
+				make_pony_phys();
+			}
+		}
+		break;
+		case WM_NOTIFY:
+		{
+			switch( ((LPNMHDR)L)->code )
+			{
+				//Message sent because user changed the tab selection 
+				// (clicked on another tab)
+				case TCN_SELCHANGING: 
+				{
+					//Hide the old tab from view
+					if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 0 )
+					{
+						ShowWindow(ghw_tab1, SW_HIDE);
+					}
+					else if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 1 )
+					{
+						ShowWindow(ghw_tab2, SW_HIDE);
+					}
+					else if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 2 )
+					{
+						ShowWindow(ghw_tab3, SW_HIDE);
+					}
+					else if ( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 3 )
+					{
+						ShowWindow(ghw_tab4, SW_HIDE);
+					}
+				}
+				break;
+
+				//Message sent when new tab gains focus
+				case TCN_SELCHANGE:
+				{
+					//Make the new tab visible
+					if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 0 )
+					{
+						ShowWindow(ghw_tab1, SW_SHOW);
+					} 
+					else if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 1 )
+					{
+						ShowWindow(ghw_tab2, SW_SHOW);
+					}
+					else if( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 2 )
+					{
+						ShowWindow(ghw_tab3, SW_SHOW);
+					}
+					else if ( TabCtrl_GetCurSel(GetDlgItem(ghw_main, IDC_TAB_MAIN)) == 3 )
+					{
+						ShowWindow(ghw_tab4, SW_SHOW);
+					}
+				}
+				break;
+
+				case LVN_ITEMCHANGED:
+				{
+					if(gb_forceupdate)
+					{
+						player_entry pe_current = get_form_player_info(gn_forceupdate);
+						if( !(gplayers[gn_forceupdate] == pe_current) )
+						{
+							if( wcscmp(gplayers[gn_forceupdate].name, pe_current.name) )
+								pe_current.b_edit_player = true;
+							gplayers[gn_forceupdate] = pe_current;
+
+							//Check if name is still in ListView
+							int list_size,ii;
+							bool b_upd = false;
+							list_size = SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_GETITEMCOUNT, 0, 0);
+							for(ii=0;ii<list_size;ii++)
+							{
+								if(gplayers[gn_playind[ii]].id==pe_current.id)
+								{
+									b_upd = true;
+									break;
+								}
+							}
+							if(b_upd)
+							{
+								//Update displayed name
+								LVITEM lvI;
+								memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+								lvI.mask = LVIF_TEXT;
+								lvI.pszText = pe_current.name;
+								lvI.iItem = ii;
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+							}
+						}
+
+						//Check and update team tables
+						team_entry te_current;
+						if( get_form_team_info(gn_forceupdate, te_current) )
+						{
+							int ti = gplayers[gn_forceupdate].team_ind;
+							if( !(gteams[ti] == te_current) )
+							{
+								gteams[ti] = te_current;
+
+								//Update combobox
+								int csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+								SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_DELETESTRING, gn_teamArrayIndToCb[ti]+1, 0);
+								SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_INSERTSTRING, gn_teamArrayIndToCb[ti]+1, (LPARAM)te_current.name);
+								SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, csel, 0);								
+							}
+						}
+
+						gn_listsel = ((LPNMLISTVIEW)L)->iItem;
+						show_player_info(gn_playind[gn_listsel]);
+
+						gb_forceupdate = false;
+					}
+					else if(((LPNMLISTVIEW)L)->iItem != gn_listsel)
+					{
+						if(gn_listsel > -1)
+						{
+							player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+							if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+							{
+								if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+									pe_current.b_edit_player = true;
+								gplayers[gn_playind[gn_listsel]] = pe_current;
+								
+								//Update displayed name
+								LVITEM lvI;
+								memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+								lvI.mask = LVIF_TEXT;
+								lvI.pszText = pe_current.name;
+								lvI.iItem = gn_listsel;
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+							}
+
+							//Check and update team tables
+							team_entry te_current;
+							if( get_form_team_info(gn_playind[gn_listsel], te_current) )
+							{
+								int ti = gplayers[gn_playind[gn_listsel]].team_ind;
+								if( !(gteams[ti] == te_current) )
+								{
+									gteams[ti] = te_current;
+
+									//Update combobox
+									int csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+									SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_DELETESTRING, gn_teamArrayIndToCb[ti]+1, 0);
+									SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_INSERTSTRING, gn_teamArrayIndToCb[ti]+1, (LPARAM)te_current.name);
+									SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, csel, 0);								
+								}
+							}
+						}
+
+						gn_listsel = ((LPNMLISTVIEW)L)->iItem;
+						show_player_info(gn_playind[gn_listsel]);
+					}
+				}
+				break;
+
+				case UDN_DELTAPOS:
+				{
+					LPNMUPDOWN lpnmud = (LPNMUPDOWN)L;
+					if(LOWORD(W)==IDB_MOVE_PLYR)
+					{
+						if(lpnmud->iDelta<0 && gn_listsel > 0) //Ensure can't move up if at top of list
+						{
+							//Get team of player in prev position on list, check if equal to current player team
+							if(gplayers[gn_playind[gn_listsel-1]].team_ind == gplayers[gn_playind[gn_listsel]].team_ind)
+							{
+								//Update current player entry
+								player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+								if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+								{
+									if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+										pe_current.b_edit_player = true;
+									gplayers[gn_playind[gn_listsel]] = pe_current;
+								}
+								//export settings for current player into temp struct 1
+								player_export currPlyrExport = gplayers[gn_playind[gn_listsel]].PlayerExport();
+								//export settings for prev player into temp struct 2
+								player_export prevPlyrExport = gplayers[gn_playind[gn_listsel-1]].PlayerExport();
+
+								//Have player copy ids match new slot
+								unsigned long tmp_id = currPlyrExport.copy_id;
+								currPlyrExport.copy_id = prevPlyrExport.copy_id;
+								prevPlyrExport.copy_id = tmp_id;
+
+								//swap temp struct 2 into (old) current player, set b_changed flag
+								gplayers[gn_playind[gn_listsel]].PlayerImport(prevPlyrExport);
+								gplayers[gn_playind[gn_listsel]].b_changed = true;
+								//import temp struct 1 into (old) prev player, set b_changed flag
+								gplayers[gn_playind[gn_listsel-1]].PlayerImport(currPlyrExport);
+								gplayers[gn_playind[gn_listsel-1]].b_changed = true;
+
+								show_player_info(gn_playind[gn_listsel]);
+
+								//Update displayed names
+								LVITEM lvI;
+								memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+								lvI.mask = LVIF_TEXT;
+								lvI.pszText = gplayers[gn_playind[gn_listsel]].name;
+								lvI.iItem = gn_listsel;
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+
+								lvI.pszText = gplayers[gn_playind[gn_listsel-1]].name;
+								lvI.iItem = gn_listsel-1;
+								//Note this will set the current selection to gn_listsel-1, the prev player
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+								//As gn_listsel has changed, make the selection visible and highlighted
+								ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel, false);
+								ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel, LVIS_SELECTED, LVIS_SELECTED);
+							}
+						}
+						else if(lpnmud->iDelta>0 && 
+								gn_listsel != ListView_GetItemCount(GetDlgItem(ghw_main, IDC_NAME_LIST))-1 &&
+								gn_listsel > -1) //Ensure can't move down if at bottom of list
+						{
+							//Get team of player in next position on list, check if equal to current player team
+							if(gplayers[gn_playind[gn_listsel+1]].team_ind == gplayers[gn_playind[gn_listsel]].team_ind)
+							{
+								//Update current player entry
+								player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+								if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+								{
+									if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+										pe_current.b_edit_player = true;
+									gplayers[gn_playind[gn_listsel]] = pe_current;
+								}
+								//export settings for current player into temp struct 1
+								player_export currPlyrExport = gplayers[gn_playind[gn_listsel]].PlayerExport();
+								//export settings for next player into temp struct 2
+								player_export nextPlyrExport = gplayers[gn_playind[gn_listsel+1]].PlayerExport();
+
+								//Have player copy ids match new slot
+								unsigned long tmp_id = currPlyrExport.copy_id;
+								currPlyrExport.copy_id = nextPlyrExport.copy_id;
+								nextPlyrExport.copy_id = tmp_id;
+
+								//swap temp struct 2 into (old) current player, set b_changed flag
+								gplayers[gn_playind[gn_listsel]].PlayerImport(nextPlyrExport);
+								gplayers[gn_playind[gn_listsel]].b_changed = true;
+								//import temp struct 1 into (old) next player, set b_changed flag
+								gplayers[gn_playind[gn_listsel+1]].PlayerImport(currPlyrExport);
+								gplayers[gn_playind[gn_listsel+1]].b_changed = true;
+
+								show_player_info(gn_playind[gn_listsel]);
+
+								//Update displayed names
+								LVITEM lvI;
+								memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+								lvI.mask = LVIF_TEXT;
+								lvI.pszText = gplayers[gn_playind[gn_listsel]].name;
+								lvI.iItem = gn_listsel;
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+
+								lvI.pszText = gplayers[gn_playind[gn_listsel+1]].name;
+								lvI.iItem = gn_listsel+1;
+								//Note this will set the current selection to gn_listsel+1, the next player
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+								//As gn_listsel has changed, make the selection visible and highlighted
+								ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel, false);
+								ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel, LVIS_SELECTED, LVIS_SELECTED);
+							}
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+		case WM_CLOSE:
+			if(ghdescriptor) 
+			{
+				if(giPesVersion >= 18)
+					destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
+				else if(giPesVersion >= 16)
+					destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
+				else
+					destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
+				ghdescriptor = NULL;
+			}
+			if(gplayers) 
+			{
+				delete[] gplayers;
+				gplayers = NULL;
+			}
+			if(gn_playind) 
+			{
+				delete[] gn_playind;
+				gn_playind = NULL;
+			}
+			if(gteams) 
+			{
+				delete[] gteams;
+				gteams = NULL;
+			}
+
+			//Delete icons, fonts and bitmaps
+			DeleteObject((HGDIOBJ)ghFont);
+			FreeLibrary(hPesDecryptDLL);
+			FreeLibrary(hPes15DecryptDLL);
+			DeleteObject(g_hbr); 
+
+			DestroyWindow(H);
+		break;
+		break;
+		case WM_DESTROY:
+			DestroyWindow(ghAatfbox);
+			PostQuitMessage(0);
+		break;
+		case WM_COMMAND:
+			wchar_t buffer[4];
+			int ret;
+			int prevPesVersion;
+			memset(buffer, 0, sizeof(buffer));
+			switch(LOWORD(W))
+			{
+				case ID_FILE_EXIT:
+					PostMessage(H, WM_CLOSE, 0, 0);
+				break;
+				case ID_FILE_OPEN_15_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 15, _T("Open PES15 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_16_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 16, _T("Open PES16 EDIT file"));
+					if(ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_17_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 17, _T("Open PES17 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_18_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 18, _T("Open PES18 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_19_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 19, _T("Open PES19 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_20_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 20, _T("Open PES20 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_FILE_OPEN_EN:
+				case ID_FILE_OPEN_21_EN:
+					prevPesVersion = giPesVersion;
+					ret = DoFileOpen(H, 21, _T("Open PES21 EDIT file"));
+					if (ret) giPesVersion = prevPesVersion;
+				break;
+				case ID_TEXP_OPEN_15_EN:
+					ret = open_texport(H, 15, _T("Open PES16 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_16_EN:
+					ret = open_texport(H, 16, _T("Open PES16 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_17_EN:
+					ret = open_texport(H, 17, _T("Open PES17 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_18_EN:
+					ret = open_texport(H, 18, _T("Open PES18 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_19_EN:
+					ret = open_texport(H, 19, _T("Open PES19 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_20_EN:
+					ret = open_texport(H, 20, _T("Open PES20 TEXPORT file"));
+				break;
+				case ID_TEXP_OPEN_21_EN:
+					ret = open_texport(H, 21, _T("Open PES21 TEXPORT file"));
+				break;
+				case ID_FILE_SAVE_EN:
+					if(ghdescriptor)
+					{
+						DoFileSave(H);
+					}
+				break;
+				case IDM_PLAY_STAT:
+					set_stats();
+				break;
+				case IDM_PLAY_BUMP:
+					bump_stats();
+				break;
+				case IDM_PLAY_COPY:
+					copy_stats();
+				break;
+				case IDM_PLAY_SWAP:
+					swap_stats();
+					break;
+				case IDM_PLAY_FTOG:
+					fpc_toggle();
+				break;
+				case IDM_TEAM_CLEAR:
+					if(gplayers) team_vis_clear();
+				break;
+				case IDM_TEAM_CREAT:
+					if(gplayers) team_created_set();
+				break;
+				case IDM_TEAM_FPCON:
+					if(gplayers) team_fpc_on();
+				break;
+				case IDM_TEAM_FPOFF:
+					if(gplayers) team_fpc_off();
+				break;
+				case IDM_TEAM_BOGLO:
+					if (gplayers) set_boot_glove_ids();
+					break;
+				case IDM_TEAM_NAMEPOS:
+					if (gn_teamsel > -1) player_names_to_positions();
+					else MessageBox(H, _T("Please select a team."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TEAM_SAVES:
+					if(gn_teamsel > -1) export_squad(H);
+					else MessageBox(H,_T("Please select a team to be saved."),NULL,MB_ICONWARNING);
+				break;
+				case IDM_TEAM_LOADS:
+					if(gn_teamsel > -1) import_squad(H);
+					else MessageBox(H,_T("Please select a team to overwrite."),NULL,MB_ICONWARNING);
+				break;
+				case IDM_TACT_NIGHTS:
+					if (gn_teamsel > -1) export_nightly(H);
+					else MessageBox(H, _T("Please select a team to be saved."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_NIGHTL:
+					if (gn_teamsel > -1) import_nightly(H);
+					else MessageBox(H, _T("Please select a team to be overwrite."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_2_P:
+					if (gn_teamsel > -1) copyPreset(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_3_P:
+					if (gn_teamsel > -1) copyPreset(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_1_P:
+					if (gn_teamsel > -1) copyPreset(1, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_3_P:
+					if (gn_teamsel > -1) copyPreset(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_1_P:
+					if (gn_teamsel > -1) copyPreset(2, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_2_P:
+					if (gn_teamsel > -1) copyPreset(2, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_2_P:
+					if (gn_teamsel > -1) swapPreset(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_3_P:
+					if (gn_teamsel > -1) swapPreset(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP2_3_P:
+					if (gn_teamsel > -1) swapPreset(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_2_F:
+					if (gn_teamsel > -1) copyFormation(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY1_3_F:
+					if (gn_teamsel > -1) copyFormation(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_1_F:
+					if (gn_teamsel > -1) copyFormation(1, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY2_3_F:
+					if (gn_teamsel > -1) copyFormation(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_1_F:
+					if (gn_teamsel > -1) copyFormation(2, 0);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_CPY3_2_F:
+					if (gn_teamsel > -1) copyFormation(2, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_2_F:
+					if (gn_teamsel > -1) swapFormation(0, 1);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP1_3_F:
+					if (gn_teamsel > -1) swapFormation(0, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_TACT_SWP2_3_F:
+					if (gn_teamsel > -1) swapFormation(1, 2);
+					else if (!gb_tactics_enabled) MessageBox(H, _T("This feature does not support 15."), NULL, MB_ICONWARNING);
+					else MessageBox(H, _T("Please select a team first."), NULL, MB_ICONWARNING);
+				break;
+				case IDM_DATA_OUTPUT:
+					if(gplayers) roster_data_output();
+				break;
+				case IDM_DATA_FIX:
+					if(gplayers) fix_database();
+				break;
+				case IDC_TEAM_LIST:
+				{
+					if(HIWORD(W)==CBN_SELCHANGE)
+					{
+						//fill player, text lists in window
+						int ii, jj, num_on_team, csel;
+						csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+						if(gn_teamCbIndToArray[csel]!=gn_teamsel)
+						{
+							if(csel>-1)
+							{
+								if(gn_listsel > -1)
+								{
+									gb_forceupdate = true;
+									gn_forceupdate = gn_playind[gn_listsel];
+								}
+								else gb_forceupdate = false;
+								if(gn_forceupdate < 0) gb_forceupdate = false;
+
+								for(num_on_team=0;num_on_team < gteams->team_max; num_on_team++)
+								{
+									if(!gteams[gn_teamCbIndToArray[csel]].players[num_on_team]) break;
+								}
+
+								if(gn_playind != NULL) delete[] gn_playind;
+								gn_playind = new int[num_on_team];
+								for (int ii=0; ii<num_on_team; ii++) gn_playind[ii] = -1;
+
+								SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_DELETEALLITEMS, 0, 0);
+								LVITEM lvI;
+								memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+								lvI.mask = LVIF_TEXT;
+								int kk=0;
+								for(ii=0;ii<gnum_players;ii++)
+								{
+									for(jj=0;jj<num_on_team;jj++)
+									{
+										if(gplayers[ii].id == gteams[gn_teamCbIndToArray[csel]].players[jj])
+										{
+											gn_playind[kk] = ii;
+											lvI.pszText = gplayers[ii].name;
+											lvI.iItem = kk;
+											SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_INSERTITEM, 0, (LPARAM)&lvI);
+											kk++;
+											break;
+										}
+									}
+									if(kk==num_on_team) break;
+								}
+
+								gn_teamsel = gn_teamCbIndToArray[csel]; //Update ID of currently selected team
+
+								if(gplayers && (gn_playind[0] > -1))
+								{
+									ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);
+									gn_listsel = 0;
+								}
+								else 
+								{
+									gn_listsel = -1;
+									show_player_info(-1);
+								}	
+
+								init_tactics_tab();
+							}
+							else
+							{
+								if (gb_tactics_enabled)
+									toggle_tactics(FALSE);
+
+								if(gn_listsel > -1)
+								{
+									gb_forceupdate = true;
+									gn_forceupdate = gn_playind[gn_listsel];
+								}
+								else gb_forceupdate = false;
+								fill_list_all_players();
+								gn_teamsel = -1;
+							}
+						}
+					}
+				}
+				break;
+				case IDB_CAPTAIN:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						if(ghdescriptor && (gn_listsel > -1))
+						{
+							SendDlgItemMessage(H, IDB_CAPTAIN, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+							if(gteams[gplayers[gn_playind[gn_listsel]].team_ind].captain_ind != 
+								gplayers[gn_playind[gn_listsel]].team_lineup_ind)
+							{
+								gteams[gplayers[gn_playind[gn_listsel]].team_ind].captain_ind = 
+									gplayers[gn_playind[gn_listsel]].team_lineup_ind;
+								gteams[gplayers[gn_playind[gn_listsel]].team_ind].b_changed = true;
+							}
+						}
+					}
+				}
+				break;
+				case IDB_MAKE_GOLD:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						if (vglmode) {
+
+							using namespace gold; //use gold stats only
+							int ii;
+							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+							{
+								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+								}
+								else //stat is changed
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+								}
+
+							}
+
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+
+							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());;
+
+							/*
+							_itow_s(goldRate_vgl, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldForm_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldIR_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+							*/
+
+						}
+						else {
+							_itow_s(goldRate, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldForm, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldIR, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldWeakFootUse, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(goldWeakFootAcc, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+						}
+					}
+				}
+				break;
+				case IDB_MAKE_GOLD_COLOR:
+				{
+					if (HIWORD(W) == BN_CLICKED)
+					{
+						wchar_t oldName[0x1000];
+						wchar_t newName[0x1000];
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
+
+						newName[0] = 0;
+						wcscat(newName, L"ccc9900ff");
+						wcscat(newName, oldName);
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+					}
+				}
+				break;
+				case IDB_MAKE_SILV:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						if (vglmode) {
+
+							using namespace silver; //use silver stats only
+							int ii;
+
+							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+							{
+								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+								}
+								else //stat is changed
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+								}
+
+							}
+
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+
+							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
+
+							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
+
+							/*
+							_itow_s(silverRate_vgl, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverForm_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverIR_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+							*/
+						}
+						else {
+							_itow_s(silverRate, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverForm, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverIR, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverWeakFootUse, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(silverWeakFootAcc, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+						}
+
+					}
+				}
+				break;
+				case IDB_MAKE_SILV_COLOR:
+				{
+					if (HIWORD(W) == BN_CLICKED)
+					{
+						wchar_t oldName[0x1000];
+						wchar_t newName[0x1000];
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
+
+						newName[0] = 0;
+						wcscat(newName, L"cccccccff");
+
+						wcscat(newName, oldName);
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+					}
+				}
+				break;
+				case IDB_MAKE_BRON_COLOR:
+				{
+					if (HIWORD(W) == BN_CLICKED)
+					{
+						wchar_t oldName[0x1000];
+						wchar_t newName[0x1000];
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
+
+						newName[0] = 0;
+						wcscat(newName, L"c8b5f55ff");
+
+						wcscat(newName, oldName);
+
+						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+					}
+				}
+				break;
+				case IDB_MAKE_BRON:
+				{
+					if (HIWORD(W) == BN_CLICKED)
+					{
+
+						if (vglmode) {
+							using namespace bronze; //use silver stats only
+							int ii;
+
+							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+							{
+								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+								}
+								else //stat is changed
+								{
+									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+								}
+
+							}
+
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+
+							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
+
+							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
+						}
+						else {
+							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
+//	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
+
+							_itow_s(regRate, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regForm, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regIR, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFootUse, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFootAcc, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+						}
+					}
+				}
+				break;
+//				case IDB_MAKE_BUFF:
+//				{
+//					if (HIWORD(W) == BN_CLICKED)
+//					{
+//
+//						if (vglmode) {
+//							using namespace buffed; //use silver stats only
+//							int ii;
+//
+//							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+//							{
+//								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+//								{
+//									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+//								}
+//								else //stat is changed
+//								{
+//									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+//								}
+//
+//							}
+//
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+//
+//							SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
+//
+//							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
+//						}
+//						else {
+//							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
+////	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
+//
+//							_itow_s(regRate, buffer, 3, 10);
+//							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+//								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+//
+//							_itow_s(regForm, buffer, 3, 10);
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+//
+//							_itow_s(regIR, buffer, 3, 10);
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+//
+//							_itow_s(regWeakFootUse, buffer, 3, 10);
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+//
+//							_itow_s(regWeakFootAcc, buffer, 3, 10);
+//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+//						}
+//					}
+//				}
+//				break;
+				case IDB_MAKE_REGU:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+
+						if (vglmode) {
+							if (gplayers[gn_playind[gn_listsel]].reg_pos != 0)
+							{
+								using namespace regular; //use regular stats only
+								int ii;
+
+								for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								{
+									if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+									{
+										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+									}
+									else //stat is changed
+									{
+										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+									}
+
+								}
+							
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+								//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
+							}
+							else
+							{
+								using namespace goalkeeper; //use goalkeeper stats only
+								int ii;
+
+								for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								{
+									if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
+									{
+										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
+									}
+									else //stat is changed
+									{
+										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
+									}
+
+								}
+
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
+								SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
+								//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
+							}
+
+							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
+
+							/*_itow_s(regRate_vgl, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regForm_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regIR_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFoot_vgl, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);*/
+						}
+						else {
+							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
+//	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
+
+							_itow_s(regRate, buffer, 3, 10);
+							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regForm, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regIR, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFootUse, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+							_itow_s(regWeakFootAcc, buffer, 3, 10);
+							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+						}
+					}
+				}
+				break;
+				case IDB_SET_STATS:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						int ii;
+						TCHAR buffer[3];
+						GetDlgItemText(H, IDT_SET_STATS, buffer, 3);
+						for(ii=IDT_ABIL_ATKP;ii<gi_lastAbility;ii+=2)
+						{
+							SetDlgItemText(ghw_tab1, ii, buffer);
+						}
+					}
+				}
+				break;
+				case IDM_DATA_AATFC: //Run AATF on currently-selected team and show results in a dialog box
+				{
+					if(gn_teamsel > -1)
+					{
+						update_tables();
+						ShowWindow(ghAatfbox, SW_SHOW);
+						if (vglmode) {
+							aatf_single_vgl(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, false);
+						}
+						else {
+							aatf_single(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players);
+						}
+						
+					}
+					else MessageBox(H,_T("Please select a team to check."),NULL,MB_ICONWARNING);
+				}
+				break;
+				case IDM_DATA_AATFC_SUG: //Run AATF on currently-selected team and show results in a dialog box with suggestions
+				{
+					if (gn_teamsel > -1)
+					{
+						update_tables();
+						ShowWindow(ghAatfbox, SW_SHOW);
+						if (vglmode) {
+							aatf_single_vgl(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, true);
+						}
+						else {
+							aatf_single(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players);
+						}
+						
+					}
+					else MessageBox(H, _T("Please select a team to check."), NULL, MB_ICONWARNING);
+				}
+				break;
+				case IDM_DATA_AATFS: //Run AATF on teams selected from a list
+				{
+					if(ghdescriptor)
+					{
+						update_tables();
+						DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF_SEL), H, aatf_sel_dlg_proc);
+					}
+				}
+				break;
+				case IDM_DATA_AATFS_SUG: //Run AATF on teams selected from a list with suggestions
+				{
+					if (ghdescriptor)
+					{
+						update_tables();
+						DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF_SEL), H, aatf_sel_dlg_proc_sug);
+					}
+				}
+				break;
+				case IDM_DATA_COMPE: //Compare this save to another and report any changes
+				{
+					if(ghdescriptor)
+					{
+						update_tables();
+						
+						//Open dialog box to get file path
+						OPENFILENAME ofn;
+						TCHAR cs_file_name[MAX_PATH] = _T("");
+						TCHAR cs_open_title[40];
+
+						_stprintf_s(cs_open_title, 40, _T("Select PES%d EDIT file for comparison"), giPesVersion);
+
+						ZeroMemory(&ofn, sizeof(ofn));
+
+						ofn.lStructSize = sizeof(OPENFILENAME);
+						ofn.hwndOwner = NULL;
+					//	ofn.lpstrFilter = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+						ofn.lpstrFile = cs_file_name;
+						ofn.nMaxFile = MAX_PATH;
+						ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+						ofn.lpstrTitle = cs_open_title;
+
+						if(GetOpenFileName(&ofn))
+						{
+							DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF), H, aatf_comp_dlg_proc, (LPARAM)cs_file_name);
+							//DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF), H, aatf_comp_dlg_proc);
+						}
+						//else
+						//{
+						//	DWORD ret = CommDlgExtendedError();
+						//	int lll=0;
+						//}
+					}
+				}
+				break;
+				/*case IDC_NAME_LIST:
+				{
+					if(HIWORD(W)==LBN_SELCHANGE)
+					{
+						player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+						if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+							gplayers[gn_playind[gn_listsel]] = pe_current;
+
+						//Update displayed name
+
+						//Check and update team tables
+						//team_entry te_current = get_form_team_info();
+
+						gn_listsel = SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LB_GETCURSEL, 0, 0);
+						show_player_info(gn_playind[gn_listsel]);
+					}
+				}*/
+				break;
+			}
+		break;
+		default:
+			return DefWindowProc(H, M, W, L);
+	}
+	return 0;
+}
+
+//Load libpesXcrypter.dll and the helper functions we need from it
+int loadDLL()
+{
+	//Load DLL
+	hPesDecryptDLL = LoadLibrary(L"lib\\libpesXcrypter.dll");
+	if(!hPesDecryptDLL)
+	{
+		DWORD dw = GetLastError();
+		LPVOID lpMsgBuf;
+		if (FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR)&lpMsgBuf,
+			0, NULL) == 0) {
+			MessageBox(NULL, TEXT("FormatMessage failed"), TEXT("Error"), MB_OK);
+			ExitProcess(dw);
+		}
+		MessageBox(NULL, (LPCTSTR)lpMsgBuf, TEXT("Error"), MB_OK);
+		LocalFree(lpMsgBuf);
+		MessageBox(NULL, _T("Failed to load libpesXcrypter.dll"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		return EXIT_FAILURE;
+	}
+	//Load functions from DLL
+	createFileDescriptorOld = (pf_createFileDescriptorOld)GetProcAddress(hPesDecryptDLL, "createFileDescriptorOld");
+	if(!createFileDescriptorOld)
+	{
+		MessageBox(NULL, _T("Failed to load createFileDescriptorOld"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	createFileDescriptorNew = (pf_createFileDescriptorNew)GetProcAddress(hPesDecryptDLL, "createFileDescriptorNew");
+	if(!createFileDescriptorNew)
+	{
+		MessageBox(NULL, _T("Failed to load createFileDescriptorNew"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	destroyFileDescriptorOld = (pf_destroyFileDescriptorOld)GetProcAddress(hPesDecryptDLL, "destroyFileDescriptorOld");
+	if(!destroyFileDescriptorOld)
+	{
+		MessageBox(NULL, _T("Failed to load destroyFileDescriptorOld"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	destroyFileDescriptorNew = (pf_destroyFileDescriptorNew)GetProcAddress(hPesDecryptDLL, "destroyFileDescriptorNew");
+	if(!destroyFileDescriptorNew)
+	{
+		MessageBox(NULL, _T("Failed to load destroyFileDescriptorNew"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	decryptWithKeyOld = (pf_decryptWithKeyOld)GetProcAddress(hPesDecryptDLL, "decryptWithKeyOld");
+	if(!decryptWithKeyOld)
+	{
+		MessageBox(NULL, _T("Failed to load decryptWithKeyOld"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	decryptWithKeyNew = (pf_decryptWithKeyNew)GetProcAddress(hPesDecryptDLL, "decryptWithKeyNew");
+	if(!decryptWithKeyNew)
+	{
+		MessageBox(NULL, _T("Failed to load decryptWithKeyNew"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	encryptWithKeyOld = (pf_encryptWithKeyOld)GetProcAddress(hPesDecryptDLL, "encryptWithKeyOld");
+	if(!encryptWithKeyOld)
+	{
+		MessageBox(NULL, _T("Failed to load encryptWithKeyOld"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+	encryptWithKeyNew = (pf_encryptWithKeyNew)GetProcAddress(hPesDecryptDLL, "encryptWithKeyNew");
+	if(!encryptWithKeyNew)
+	{
+		MessageBox(NULL, _T("Failed to load encryptWithKeyNew"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPesDecryptDLL);
+		return EXIT_FAILURE;
+	}
+
+	//Load PES15 DLL
+	hPes15DecryptDLL = LoadLibrary(L"lib\\libpes15crypter.dll");
+	if (!hPes15DecryptDLL)
+	{
+		DWORD dw = GetLastError();
+		LPVOID lpMsgBuf;
+		if (FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR)&lpMsgBuf,
+			0, NULL) == 0) {
+			MessageBox(NULL, TEXT("FormatMessage failed"), TEXT("Error"), MB_OK);
+			ExitProcess(dw);
+		}
+		MessageBox(NULL, (LPCTSTR)lpMsgBuf, TEXT("Error"), MB_OK);
+		LocalFree(lpMsgBuf);
+		MessageBox(NULL, _T("Failed to load hPes15DecryptDLL"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		return EXIT_FAILURE;
+	}
+	//Load functions from DLL
+	createFileDescriptor15 = (pf_createFileDescriptor15)GetProcAddress(hPes15DecryptDLL, "createFileDescriptor15");
+	if (!createFileDescriptor15)
+	{
+		MessageBox(NULL, _T("Failed to load createFileDescriptor15"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPes15DecryptDLL);
+		return EXIT_FAILURE;
+	}
+	destroyFileDescriptor15 = (pf_destroyFileDescriptor15)GetProcAddress(hPes15DecryptDLL, "destroyFileDescriptor15");
+	if (!destroyFileDescriptor15)
+	{
+		MessageBox(NULL, _T("Failed to load destroyFileDescriptor15"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPes15DecryptDLL);
+		return EXIT_FAILURE;
+	}
+	decryptFile15 = (pf_decryptFile15)GetProcAddress(hPes15DecryptDLL, "decryptFile15");
+	if (!decryptFile15)
+	{
+		MessageBox(NULL, _T("Failed to load decryptFile15"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPes15DecryptDLL);
+		return EXIT_FAILURE;
+	}
+	encryptFile15 = (pf_encryptFile15)GetProcAddress(hPes15DecryptDLL, "encryptFile15");
+	if (!encryptFile15)
+	{
+		MessageBox(NULL, _T("Failed to load encryptFile15"), _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		FreeLibrary(hPes15DecryptDLL);
+		return EXIT_FAILURE;
+	}
+
+	return 0;
+}
+
+//Launch an Open File dialog box and attempt to open the selected file
+int DoFileOpen(HWND hwnd, int pesVersion, TCHAR* pcs_title)
+{
+	OPENFILENAME ofn;
+	TCHAR cs_file_name[MAX_PATH] = _T("");
+	DWORD code;
+    LPEXCEPTION_POINTERS info;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+//	ofn.lpstrFilter = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+	ofn.lpstrFile = cs_file_name;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+//	ofn.lpstrDefExt = "txt";
+	ofn.lpstrTitle = pcs_title;
+
+	if(GetOpenFileName(&ofn))
+	{
+		gb_firstsave = true;
+		//giPesVersion = pesVersion;
+		__try
+		{
+			data_handler(cs_file_name, pesVersion);
+		}
+		__except(code = GetExceptionCode(), info = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER) 
+			                                //If file loading fails (usually due to trying to open the wrong type of file for the chosen loader, 
+											// e.g. opening a PES21 save file with the PES19 loading function), report the error and fail gracefully
+		{
+			TCHAR errBuffer[MAX_PATH] = _T("");
+			_stprintf_s(errBuffer, MAX_PATH, _T("File loading failed with code %d.\nThe EDIT file may be from a different PES version or may be malformed."),
+				code);
+			MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+			//bool checkthis;
+			//checkthis = (code == EXCEPTION_ACCESS_VIOLATION);
+			//Clear all entries, as no save has been loaded
+			if(ghdescriptor) 
+			{
+				if(giPesVersion>=18)
+					destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
+				else if(giPesVersion >= 16)
+					destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
+				else
+					destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
+				ghdescriptor = NULL;
+			}
+			SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_DELETEALLITEMS, 0, 0);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_RESETCONTENT, 0, 0);
+			return 1;
+		}
+		return 0;
+	}
+	return 2;
+}
+
+//Launch a Save File dialog box and save the PES EDIT data to the chosen location
+void DoFileSave(HWND hwnd)
+{
+	OPENFILENAME ofn;
+	TCHAR cs_file_name[MAX_PATH] = _T("");
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	TCHAR cs_save_title[30];
+	_stprintf_s(cs_save_title, 30, _T("Save PES%d EDIT file"), giPesVersion);
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = cs_file_name;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = cs_save_title;
+
+	if(GetSaveFileName(&ofn))
+	{
+		if( PathFileExists(cs_file_name) && gb_firstsave )
+		{
+			gb_firstsave = false;
+
+			TCHAR cs_backup_file_name[MAX_PATH];
+			int size = _tcsnlen(cs_file_name,MAX_PATH);
+			_tcsncpy(cs_backup_file_name, cs_file_name, size);
+			_tcsncpy(&cs_backup_file_name[size], _T(".BACKUP\0"), 8);
+			CopyFile(cs_file_name, cs_backup_file_name, false);
+		}	
+		save_handler(cs_file_name);
+	}
+}
+
+
+void data_handler(const TCHAR *pcs_file_name, int pesVersion)
+{
+	int ii, current_byte, appearance_byte;
+
+	if(ghdescriptor) 
+	{
+		if(giPesVersion>=18)
+			destroyFileDescriptorNew((FileDescriptorNew*)ghdescriptor);
+		else if(giPesVersion >= 16)
+			destroyFileDescriptorOld((FileDescriptorOld*)ghdescriptor);
+		else
+			destroyFileDescriptor15((FileDescriptor15*)ghdescriptor);
+		ghdescriptor = NULL;
+	}
+	giPesVersion = pesVersion;
+
+	if(gplayers) 
+	{
+		delete[] gplayers;
+		gplayers = NULL;
+	}
+	if(gn_playind) 
+	{
+		delete[] gn_playind;
+		gn_playind = NULL;
+	}
+	if(gteams) 
+	{
+		delete[] gteams;
+		gteams = NULL;
+	}
+	if(gn_teamCbIndToArray) 
+	{
+		delete[] gn_teamCbIndToArray;
+		gn_teamCbIndToArray = NULL;
+	}
+	if(gn_teamArrayIndToCb) 
+	{
+		delete[] gn_teamArrayIndToCb;
+		gn_teamArrayIndToCb = NULL;
+	}
+	gb_forceupdate = false;
+	gn_forceupdate = -1; //These two vars are redundant - should remove gb_forceupdate and just use gb_forceupdate > 1
+	gn_listsel = -1; //No selection after load/reload
+
+	//Disable extra skill checkboxes
+	for(ii=28;ii<41;ii++)
+	{
+		Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii),BST_UNCHECKED);
+		Button_Enable(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii), FALSE); 
+	}
+
+	//Enable 16+ skill checkboxes
+	int post16skills[6] = { IDB_SKIL_HEAD, IDB_SKIL_HEEL, IDB_SKIL_RABO, IDB_SKIL_LLPA, IDB_SKIL_MALI, IDB_SKIL_ACRC };
+	for (int ii = 0; ii < 6; ii++)
+	{
+		Button_SetCheck(GetDlgItem(ghw_tab1, post16skills[ii]), BST_UNCHECKED);
+		Button_Enable(GetDlgItem(ghw_tab1, post16skills[ii]), TRUE);
+	}
+
+	//Disable extra ability editboxes
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_TIPO), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_TIPO));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T44), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T44));
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_AGGR), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_AGGR));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T45), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T45));
+
+	//Enable Physical Contact skill edit control
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36));
+
+	//Enable Clearing skill
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_CLEA), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_CLEA));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T41), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T41));
+
+	//Enable Reflexes skill
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_REFL), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_REFL));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T42), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T42));
+
+	//Enable Coverage skill
+	EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_COVE), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_COVE));
+	EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43), TRUE);
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43));
+
+	//Remove Custom Skin option
+	if(SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_GETCOUNT, 0, 0) == 8)
+		SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_DELETESTRING, (WPARAM)7, 0);
+
+	//Change Attacking Prowess label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T21), _T("Attacking Prowess:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T21));
+
+	//Change Swerve label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T28), _T("Swerve:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T28));
+
+	//Change Defensive Prowess label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T30), _T("Defensive Prowess:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T30));
+
+	//Change Explosive Power label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T34), _T("Explosive Power:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T34));
+
+	//Change Body Control label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Body Control:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35));
+
+	//Change Goalkeeping label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T39), _T("Goalkeeping:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T39));
+
+	//Change Catching label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T40), _T("Catching:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T40));
+
+	//Change Coverage label to default
+	SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T43), _T("Coverage:"));
+	UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43));
+
+	//Set ranges of motion scroll buttons to default
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_HUND, UDM_SETRANGE, 0, MAKELPARAM(1, 3));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_ARMD, UDM_SETRANGE, 0, MAKELPARAM(1, 8));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_HUNR, UDM_SETRANGE, 0, MAKELPARAM(1, 3));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_ARMR, UDM_SETRANGE, 0, MAKELPARAM(1, 8));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_CK, UDM_SETRANGE, 0, MAKELPARAM(1, 6));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_FK, UDM_SETRANGE, 0, MAKELPARAM(1, 16));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_PK, UDM_SETRANGE, 0, MAKELPARAM(1, 4));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC1, UDM_SETRANGE, 0, MAKELPARAM(0, 122));
+	SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC2, UDM_SETRANGE, 0, MAKELPARAM(0, 122));
+
+	//Disable all tactics controls
+	toggle_tactics(FALSE);
+
+	if (giPesVersion == 15)
+	{
+		ghdescriptor = (void*)createFileDescriptor15();
+		uint32_t inputLen = 0;
+		uint8_t* pfin = readFile(pcs_file_name, &inputLen);
+		((FileDescriptor15*)ghdescriptor)->dataSize = inputLen; //IMPORTANT: need to set the dataSize here
+		decryptFile15((FileDescriptor15*)ghdescriptor, pfin);
+
+		//Ensure Custom Skin option is available
+		if (SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_GETCOUNT, 0, 0) < 8)
+			SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_ADDSTRING, 0, (LPARAM)_T("Custom"));
+
+		//Disable Physical Contact skill box in 15, as this stat doesn't exist
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36));
+
+		//Disable Clearing skill box in 15, as this stat doesn't exist
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_CLEA), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_CLEA));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T41), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T41));
+
+		//Disable Reflexes skill box in 15, as this stat doesn't exist
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_REFL), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_REFL));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T42), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T42));
+
+		//Disable Coverage skill box in 15, as this stat doesn't exist
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_COVE), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_COVE));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43));
+
+		//Change Body Control label to "Body Balance"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Body Balance:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35));
+
+		//Change Catching label to "Saving"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T40), _T("Saving:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T40));
+
+		//Disable 16+ skill checkboxes
+		int post16skills[6] = { IDB_SKIL_HEAD, IDB_SKIL_HEEL, IDB_SKIL_RABO, IDB_SKIL_LLPA, IDB_SKIL_MALI, IDB_SKIL_ACRC };
+		for (int ii = 0; ii < 6; ii++)
+		{
+			Button_SetCheck(GetDlgItem(ghw_tab1, post16skills[ii]), BST_UNCHECKED);
+			Button_Enable(GetDlgItem(ghw_tab1, post16skills[ii]), FALSE);
+		}
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 18;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle18[ii]);
+		}
+
+		//get number of player, team entries
+		gnum_players = ((FileDescriptor15*)ghdescriptor)->data[0x34];
+		gnum_players += (((FileDescriptor15*)ghdescriptor)->data[0x35]) * 256;
+
+		gnum_teams = ((FileDescriptor15*)ghdescriptor)->data[0x38];
+		gnum_teams += (((FileDescriptor15*)ghdescriptor)->data[0x39]) * 256;
+
+		//First, generate map b/w player ID and Appearance Entry start byte so we can access the correct start byte position
+		// for each player ID when we loop over the Player Entry, even if they're in different orders
+		appearance_byte = 0x2AB9CC;
+		int pid = 0;
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			build_appearance_map15(g_umap_pid_to_startByte, appearance_byte, ghdescriptor);
+		}
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x4C;
+		if (gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			read_player_entry15(gplayers[ii], current_byte, ghdescriptor);
+			read_appearance_entry15(gplayers[ii], g_umap_pid_to_startByte, ghdescriptor);
+		}
+
+		//Place team entries into array of structs
+		current_byte = 0x44AA6C;
+		if (gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_ids15(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		current_byte = 0x4E45CC;
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_rosters15(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		current_byte = 0x507194;
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_tactics15(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+	else if(giPesVersion==16)
+	{
+		ghdescriptor = (void*)createFileDescriptorOld();
+		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
+		uint8_t *pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyOld((FileDescriptorOld*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+
+		//Ensure Custom Skin option is available
+		if(SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_GETCOUNT, 0, 0) < 8)
+			SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_ADDSTRING, 0, (LPARAM)_T("Custom"));
+
+		//Disable Physical Contact skill box in 16, as this stat doesn't exist
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_PHCO));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36), FALSE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T36));
+
+		//Change Body Control label to "Body Balance"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Body Balance:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35));
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 18;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle18[ii] );
+		}
+		
+		//get number of player, team entries
+		gnum_players = ((FileDescriptorOld*)ghdescriptor)->data[0x34];
+		gnum_players += (((FileDescriptorOld*)ghdescriptor)->data[0x35])*256;
+		
+		gnum_teams = ((FileDescriptorOld*)ghdescriptor)->data[0x38];
+		gnum_teams += (((FileDescriptorOld*)ghdescriptor)->data[0x39])*256;
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x4C;
+		appearance_byte = 0x2AB9CC;
+		if(gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			fill_player_entry16(gplayers[ii], current_byte, ghdescriptor);
+			fill_appearance_entry16(gplayers[ii], appearance_byte, ghdescriptor);
+		}
+
+		//place team entries into array of structs
+		current_byte = 0x46310C;
+		if(gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_ids16(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		current_byte = 0x4FCC6C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_rosters16(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		current_byte = 0x51F814;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_tactics16(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+	else if(giPesVersion==17)
+	{
+		ghdescriptor = (void*)createFileDescriptorOld();
+		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
+		uint8_t *pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyOld((FileDescriptorOld*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+
+		//Ensure Custom Skin option is available
+		if(SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_GETCOUNT, 0, 0) < 8)
+			SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_ADDSTRING, 0, (LPARAM)_T("Custom"));
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 18;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle18[ii]);
+		}
+
+		//get number of player, team entries
+		gnum_players = ((FileDescriptorOld*)ghdescriptor)->data[0x5C];
+		gnum_players += (((FileDescriptorOld*)ghdescriptor)->data[0x5D])*256;
+
+		gnum_teams = ((FileDescriptorOld*)ghdescriptor)->data[0x60];
+		gnum_teams += (((FileDescriptorOld*)ghdescriptor)->data[0x61])*256;
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x78;
+		if(gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			fill_player_entry17(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//place team entries into array of structs
+		current_byte = 0x3C3E58;
+		if(gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_ids17(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		current_byte = 0x475A90;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_rosters17(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		current_byte = 0x490640;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_tactics17(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+	else if(giPesVersion==18)
+	{
+		ghdescriptor = (void*)createFileDescriptorNew();
+		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes18");
+		uint8_t *pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+
+		//Change Body Control label to "Strength on the Ball"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Strength on Ball:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35)); //RedrawWindow(static_label, NULL, NULL, RDW_ERASE);
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 18;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle18[ii]);
+		}
+
+		//get number of player, team entries
+		gnum_players = ((FileDescriptorNew*)ghdescriptor)->data[96];
+		gnum_players += (((FileDescriptorNew*)ghdescriptor)->data[97])*256;
+
+		gnum_teams = ((FileDescriptorNew*)ghdescriptor)->data[100];
+		gnum_teams += (((FileDescriptorNew*)ghdescriptor)->data[101])*256;
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x7C;
+		if(gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			fill_player_entry18(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//place team entries into array of structs
+		current_byte = 0x3C3E5C;
+		if(gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_ids18(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		current_byte = 0x46FF54;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_rosters18(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		current_byte = 0x488B74;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_tactics18(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+	else if(giPesVersion==19) // PES 19
+	{
+		ghdescriptor = (void*)createFileDescriptorNew();
+		gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes19");
+		uint8_t *pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+
+		//Change Body Control label to "Unwavering Balance"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Unwavering Balance:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35)); //RedrawWindow(static_label, NULL, NULL, RDW_ERASE);
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 22;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle19[ii]);
+		}
+
+		//Enable extra skill checkboxes up to 39
+		for(ii=28;ii<39;ii++)
+		{
+			Button_Enable(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii), TRUE); 
+		}
+
+		//get number of player, team entries
+		gnum_players = ((FileDescriptorNew*)ghdescriptor)->data[96];
+		gnum_players += (((FileDescriptorNew*)ghdescriptor)->data[97])*256;
+
+		gnum_teams = ((FileDescriptorNew*)ghdescriptor)->data[100];
+		gnum_teams += (((FileDescriptorNew*)ghdescriptor)->data[101])*256;
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x7C;
+		if(gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			fill_player_entry19(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//place team entries into array of structs
+		current_byte = 0x5BCC7C;
+		if(gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_ids19(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		current_byte = 0x6773C4;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_rosters19(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		current_byte = 0x69EC8C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_tactics19(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+	else // PES 20/21
+	{
+		ghdescriptor = (void*)createFileDescriptorNew();
+		if(giPesVersion==20)
+			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes20");
+		else
+			gpMasterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes21");
+		uint8_t *pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyNew((FileDescriptorNew*)ghdescriptor, pfin, reinterpret_cast<const char*>(gpMasterKey));
+
+		//Enable extra ability editboxes
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_TIPO), TRUE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_TIPO));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T44), TRUE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T44));
+		EnableWindow(GetDlgItem(ghw_tab1, IDT_ABIL_AGGR), TRUE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDT_ABIL_AGGR));
+		EnableWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T45), TRUE);
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T45));
+
+		//Change Attacking Prowess label to "Offensive Awareness"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T21), _T("Offensive Awareness:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T21));
+
+		//Change Swerve label to "Curl"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T28), _T("Curl:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T28));
+
+		//Change Defensive Prowess label to "Defensive Awareness"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T30), _T("Defensive Awareness:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T30));
+
+		//Change Explosive Power label to "Acceleration"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T34), _T("Acceleration:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T34));
+		
+		//Change Body Control label to "Balance"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T35), _T("Balance:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T35));
+
+		//Change Goalkeeping label to "GK Awareness"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T39), _T("GK Awareness:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T39));
+
+		//Change Coverage label to "GK Reach"
+		SetWindowText(GetDlgItem(ghw_tab1, IDC_STATIC_T43), _T("GK Reach:"));
+		UpdateWindow(GetDlgItem(ghw_tab1, IDC_STATIC_T43));
+
+		//Set ranges of motion scroll buttons
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_HUND, UDM_SETRANGE, 0, MAKELPARAM(1, 5));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_ARMD, UDM_SETRANGE, 0, MAKELPARAM(1, 10));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_HUNR, UDM_SETRANGE, 0, MAKELPARAM(1, 5));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_ARMR, UDM_SETRANGE, 0, MAKELPARAM(1, 10));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_CK, UDM_SETRANGE, 0, MAKELPARAM(1, 10));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_FK, UDM_SETRANGE, 0, MAKELPARAM(1, 20));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_PK, UDM_SETRANGE, 0, MAKELPARAM(1, 7));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC1, UDM_SETRANGE, 0, MAKELPARAM(0, 162));
+		SendDlgItemMessage(ghw_tab2, IDC_MOTI_GC2, UDM_SETRANGE, 0, MAKELPARAM(0, 162));
+
+		//Fill Play Style combobox:	
+		int numPlayStyles = 22;
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_RESETCONTENT, 0, 0);
+		for (int ii = 0; ii < numPlayStyles; ii++)
+		{
+			SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_ADDSTRING, 0, (LPARAM)gpc_playstyle20[ii]);
+		}
+
+		//Enable extra skill checkboxes
+		for(ii=28;ii<41;ii++)
+		{
+			Button_Enable(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii), TRUE); 
+		}
+
+		//get number of player, team entries
+		gnum_players = ((FileDescriptorNew*)ghdescriptor)->data[96];
+		gnum_players += (((FileDescriptorNew*)ghdescriptor)->data[97])*256;
+
+		gnum_teams = ((FileDescriptorNew*)ghdescriptor)->data[100];
+		gnum_teams += (((FileDescriptorNew*)ghdescriptor)->data[101])*256;
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x7C;
+		if(gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			fill_player_entry20(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//place team entries into array of structs
+		current_byte = 0x8ED2FC;
+		if(gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		if (giPesVersion == 20)
+		{
+			for (ii = 0; ii < gnum_teams; ii++)
+			{
+				fill_team_ids20(gteams[ii], current_byte, ghdescriptor);
+			}
+		}
+		else
+		{
+			for (ii = 0; ii < gnum_teams; ii++)
+			{
+				fill_team_ids21(gteams[ii], current_byte, ghdescriptor);
+			}
+		}
+
+		if (giPesVersion == 20) current_byte = 0x9ccc04;
+		else current_byte = 0x9D4648;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_rosters20(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+
+		if (giPesVersion == 20) current_byte = 0xa01e3c;
+		else current_byte = 0xA09880;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			fill_team_tactics20(current_byte, ghdescriptor, gteams, gnum_teams);
+		}
+	}
+
+	//Find, hide loose players
+	int jj, kk;
+	for(ii=0;ii<gnum_players;ii++)
+	{
+		bool match = false;
+		for(jj=0;jj<gnum_teams;jj++)
+		{
+			for(kk=0;kk < gteams->team_max;kk++)
+			{
+				if(gteams[jj].players[kk]==gplayers[ii].id)
+				{
+					match = true;
+					break;
+				}
+			}
+			if(match)
+			{
+				gplayers[ii].team_ind = jj;
+				gplayers[ii].team_lineup_ind = kk;
+				break;
+			}
+		}
+		if(gplayers[ii].team_ind < 0) 
+		{
+			//player_entry pe = gplayers[ii]; //DEBUG
+			gplayers[ii].b_show = false;
+		}
+	}
+
+	fill_list_all_players();
+
+	SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_RESETCONTENT, 0, 0);
+	SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_ADDSTRING, 0, (LPARAM)_T("ALL"));
+	if(gn_teamCbIndToArray != NULL) delete[] gn_teamCbIndToArray;
+	gn_teamCbIndToArray = new int[gnum_teams];
+	if(gn_teamArrayIndToCb != NULL) delete[] gn_teamArrayIndToCb;
+	gn_teamArrayIndToCb = new int[gnum_teams];
+	jj=0;
+	for(ii=0;ii<gnum_teams;ii++)
+	{
+		if(gteams[ii].b_show)
+		{
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_ADDSTRING, 0, (LPARAM)gteams[ii].name);
+			gn_teamCbIndToArray[jj] = ii;
+			gn_teamArrayIndToCb[ii] = jj;
+			jj++;
+		}
+	}
+	SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, (WPARAM)0, 0);
+	gn_teamsel = -1;
+
+	//display the info for first player in list
+	ii=0;
+	while(!gplayers[ii].b_show) ii++;
+	show_player_info(ii);
+
+	//Cleanup should go elsewhere...
+}
+
+
+void save_handler(const TCHAR *pcs_file_name)
+{
+	//First update the data structure to reflect any changes the user has made to the current player/team
+	if(gn_listsel > -1)
+	{
+		player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+		if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+		{
+			if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+				pe_current.b_edit_player = true;
+			gplayers[gn_playind[gn_listsel]] = pe_current;
+			
+			//Update displayed name
+			LVITEM lvI;
+			memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+			lvI.mask = LVIF_TEXT;
+			lvI.pszText = pe_current.name;
+			lvI.iItem = gn_listsel;
+			SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+
+			show_player_info(gn_playind[gn_listsel]);
+		}
+
+		//Check and update team tables
+		team_entry te_current;
+		if( get_form_team_info(gn_playind[gn_listsel], te_current) )
+		{
+			int ti = gplayers[gn_playind[gn_listsel]].team_ind;
+			if( !(gteams[ti] == te_current) )
+			{
+				gteams[ti] = te_current;
+
+				//Update combobox
+				int csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+				SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_DELETESTRING, gn_teamArrayIndToCb[ti]+1, 0);
+				SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_INSERTSTRING, gn_teamArrayIndToCb[ti]+1, (LPARAM)te_current.name);
+				SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, csel, 0);								
+			}
+		}
+	}
+
+	//Now write any changed player and team entries back into the ghdescriptor
+	if (giPesVersion == 15)
+	{
+		//Extract player info & appearance from array of structs
+		int current_byte = 0x4C;
+
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			write_player_entry15(gplayers[ii], current_byte, g_umap_pid_to_startByte, ghdescriptor);
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x44AA6C;
+		for (int ii = 0; ii < gnum_teams; ii++)
+		{
+			write_team_info15(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x4E45CC;
+		for (int ii = 0; ii < gnum_teams; ii++)
+		{
+			write_teamplayer_info15(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x507194;
+		for (int ii = 0; ii < gnum_teams; ii++)
+		{
+			write_team_tactics15(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize = 0;
+		uint8_t* output;
+		output = encryptFile15((FileDescriptor15*)ghdescriptor, &outputSize);
+		writeFile(pcs_file_name, output, outputSize);
+	}
+	else if(giPesVersion==16)
+	{
+		//Extract player info & appearance from array of structs
+		int ii, current_byte = 0x4C, appearance_byte = 0x2AB9CC;
+		//char strcheck[0x72]; //DEBUG
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			extract_player_entry16(gplayers[ii], current_byte, appearance_byte, ghdescriptor);
+			//memcpy(strcheck, &(ghdescriptor->data[0x82C]), 0x70); //DEBUG
+			//t2=0;
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x46310C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_info16(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x4FCC6C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_teamplayer_info16(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x51F814;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_tactics16(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize;
+		uint8_t *output;
+		output = encryptWithKeyOld((FileDescriptorOld*)ghdescriptor, &outputSize, reinterpret_cast<const char*>(gpMasterKey));
+		writeFile(pcs_file_name, output, outputSize);
+	}
+	else if(giPesVersion==17)
+	{
+		//Extract player info & appearance from array of structs
+		int ii, current_byte = 0x78;
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			extract_player_entry17(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x3C3E58;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_info17(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x475A90;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_teamplayer_info17(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x490640;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_tactics17(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize;
+		uint8_t *output;
+		output = encryptWithKeyOld((FileDescriptorOld*)ghdescriptor, &outputSize, reinterpret_cast<const char*>(gpMasterKey));
+		writeFile(pcs_file_name, output, outputSize);
+	}
+	else if(giPesVersion==18)
+	{
+		//Extract player info & appearance from array of structs
+		int ii, current_byte = 0x7C;
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			extract_player_entry18(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x3C3E5C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_info18(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x46FF54;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_teamplayer_info18(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x488B74;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_tactics18(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize;
+		uint8_t *output;
+		output = encryptWithKeyNew((FileDescriptorNew*)ghdescriptor, &outputSize, reinterpret_cast<const char*>(gpMasterKey));
+		writeFile(pcs_file_name, output, outputSize);
+	}
+	else if(giPesVersion==19)
+	{
+		//Extract player info & appearance from array of structs
+		int ii, current_byte = 0x7C;
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			extract_player_entry19(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x5BCC7C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_info19(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x6773C4;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_teamplayer_info19(gteams[ii], current_byte, ghdescriptor);
+		}
+		current_byte = 0x69EC8C;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_tactics19(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize;
+		uint8_t *output;
+		output = encryptWithKeyNew((FileDescriptorNew*)ghdescriptor, &outputSize, reinterpret_cast<const char*>(gpMasterKey));
+		writeFile(pcs_file_name, output, outputSize);
+	}
+	else //PES 20/21
+	{
+		//Extract player info & appearance from array of structs
+		int ii, current_byte = 0x7C;
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			extract_player_entry20(gplayers[ii], current_byte, ghdescriptor);
+		}
+
+		//Extract team info from array of structs
+		current_byte = 0x8ED2FC;
+		if (giPesVersion == 20)
+		{
+			for (ii = 0; ii < gnum_teams; ii++)
+			{
+				extract_team_info20(gteams[ii], current_byte, ghdescriptor);
+			}
+		}
+		else
+		{
+			for (ii = 0; ii < gnum_teams; ii++)
+			{
+				extract_team_info21(gteams[ii], current_byte, ghdescriptor);
+			}
+		}
+
+		if (giPesVersion == 20) current_byte = 0x9ccc04;
+		else current_byte = 0x9D4648;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_teamplayer_info20(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		if (giPesVersion == 20) current_byte = 0xa01e3c;
+		else current_byte = 0xA09880;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			extract_team_tactics20(gteams[ii], current_byte, ghdescriptor);
+		}
+
+		//Write out data to file
+		int outputSize;
+		uint8_t *output;
+		output = encryptWithKeyNew((FileDescriptorNew*)ghdescriptor, &outputSize, reinterpret_cast<const char*>(gpMasterKey));
+		writeFile(pcs_file_name, output, outputSize);
+		//Add function to DLL to free allocated memory
+		//freeEncryptArray(output);
+	}
+}
+
+void fill_list_all_players()
+{
+	int ii, jj;
+
+	//fill player, text lists in window
+	if(gn_playind != NULL) delete[] gn_playind;
+	gn_playind = new int[gnum_players];
+	SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_DELETEALLITEMS, 0, 0);
+	LVITEM lvI;
+	memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+	lvI.mask = LVIF_TEXT;
+	jj=0;
+	for(ii=0;ii<gnum_players;ii++)
+	{
+		if(gplayers[ii].b_show)
+		{
+			gn_playind[jj] = ii;
+			lvI.pszText = gplayers[ii].name;
+			lvI.iItem = jj;
+			SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_INSERTITEM, 0, (LPARAM)&lvI);
+			jj++;
+		}
+	}
+	//gn_listsel = 0;
+	//ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);	
+	lvI.mask = LVIF_STATE; 
+	lvI.state = true; 
+	lvI.stateMask = LVIS_SELECTED; 
+	SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEMSTATE, (WPARAM)0, (LPARAM)&lvI);
+}
+
+
+void show_player_info(int p_ind)
+{
+	int ii,jj;
+	bool match=false;
+	wchar_t buffer[21];
+	memset(buffer,0,sizeof(buffer));
+	//ZeroMemory(buffer,12);
+
+	if(p_ind > -1) //There is a currently selected player
+	{
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)gplayers[p_ind].name);
+
+		_itow_s(gplayers[p_ind].id, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_ID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		mbstowcs(buffer, gplayers[p_ind].shirt_name, 20);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_SHIRT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].nation, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NAT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].height, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].weight, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_WGT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].age, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_AGE, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(gplayers[p_ind].b_edit_player) Button_SetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT),BST_CHECKED);
+		else Button_SetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT),BST_UNCHECKED);
+
+		SendDlgItemMessage(ghw_main, IDC_PLAY_FOOT, CB_SETCURSEL, (WPARAM)gplayers[p_ind].strong_foot, 0);
+		if(giPesVersion>=20)
+			SendDlgItemMessage(ghw_tab2, IDC_PLAY_HAND, CB_SETCURSEL, (WPARAM)gplayers[p_ind].strong_hand, 0);
+		
+		SendDlgItemMessage(ghw_main, IDC_PLAY_RPOS, CB_SETCURSEL, (WPARAM)gplayers[p_ind].reg_pos, 0);
+
+		ii = gplayers[p_ind].play_style;
+		if((giPesVersion == 15 || giPesVersion == 16) && ii>16) ii--; //Unused index at 16 (left over from PES14)
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_SETCURSEL, (WPARAM)ii, 0);
+
+		for(ii=0;ii<13;ii++)
+		{
+			SendDlgItemMessage(ghw_tab1, IDS_PLAY_CF+ii, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)gplayers[p_ind].play_pos[ii]);
+		}
+
+		for(ii=0;ii<7;ii++)
+		{
+			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_COM_TRIC+ii),gplayers[p_ind].com_style[ii]);
+		}
+
+		int numSkill;
+		if(giPesVersion==19) numSkill=39;
+		else if(giPesVersion>=20) numSkill=41;
+		else numSkill=28;
+		for(ii=0;ii<numSkill;ii++)
+		{
+			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii),gplayers[p_ind].play_skill[ii]);
+		}
+
+		_itow_s(gplayers[p_ind].atk, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].ball_ctrl, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BCON, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].drib, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].lowpass, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOWP, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].loftpass, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOFT, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].finish, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FINI, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].place_kick, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_PKIC, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].swerve, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SWER, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].header, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_HEAD, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].def, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DEFP, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].ball_win, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BWIN, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].kick_pwr, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_KPOW, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(gplayers[p_ind].speed, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SPED, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].exp_pwr, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_EXPL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].body_ctrl, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BODB, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(giPesVersion>16)
+		{
+			_itow_s(gplayers[p_ind].phys_cont, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_PHCO, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		_itow_s(gplayers[p_ind].jump, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_JUMP, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].stamina, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_STAM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].gk, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_GOAL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].catching, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CATC, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if (giPesVersion > 15)
+		{
+			_itow_s(gplayers[p_ind].clearing, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_CLEA, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s(gplayers[p_ind].reflex, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_REFL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s(gplayers[p_ind].cover, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_COVE, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		if(giPesVersion>=20)
+		{
+			_itow_s(gplayers[p_ind].tight_pos, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_TIPO, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s(gplayers[p_ind].aggres, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_AGGR, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		_itow_s(gplayers[p_ind].weak_use + 1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].weak_acc + 1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].form + 1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].injury + 1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(giPesVersion>=19)
+		{
+			_itow_s(gplayers[p_ind].star, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_STAR, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+		if(giPesVersion>=20)
+		{
+			_itow_s(gplayers[p_ind].play_attit, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_PLAY_ATT, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_FACE),gplayers[p_ind].b_edit_face);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_HAIR),gplayers[p_ind].b_edit_hair);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_PHYS),gplayers[p_ind].b_edit_phys);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_STRP),gplayers[p_ind].b_edit_strip);
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_COPY_BASE),gplayers[p_ind].b_base_copy);
+
+		_itow_s(gplayers[p_ind].copy_id, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_COPY_ID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].head_len - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HELE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].head_wid - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEWI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].head_dep - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEDE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].neck_len - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_NELE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].neck_size - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_NESI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].shldr_hi - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHHE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].shldr_wid - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHWI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].chest - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_CHSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].waist - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_WASI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].arm_size - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].arm_len - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARLE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].thigh - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_THSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].calf - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_CASI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].leg_len - 7, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_LELE, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(giPesVersion>=18 && gplayers[p_ind].skin_col==7)
+		{
+			gplayers[p_ind].skin_col=0;
+			gplayers[p_ind].b_changed=true;
+		}
+		SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_SETCURSEL, (WPARAM)gplayers[p_ind].skin_col, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_PHYS_EYES, CB_SETCURSEL, (WPARAM)gplayers[p_ind].iris_col, 0);
+
+		_itow_s(gplayers[p_ind].boot_id, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_STRP_BOID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(gplayers[p_ind].glove_id, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_STRP_GLID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_WRTA, CB_SETCURSEL, (WPARAM)gplayers[p_ind].wrist_tape, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_GLST, CB_SETCURSEL, (WPARAM)gplayers[p_ind].spec_style, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_GLCO, CB_SETCURSEL, (WPARAM)gplayers[p_ind].spec_col, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SLEE, CB_SETCURSEL, (WPARAM)gplayers[p_ind].sleeve, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SLIN, CB_SETCURSEL, (WPARAM)gplayers[p_ind].inners, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SOCK, CB_SETCURSEL, (WPARAM)gplayers[p_ind].socks, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_UNDR, CB_SETCURSEL, (WPARAM)gplayers[p_ind].undershorts, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_TAIL, CB_SETCURSEL, (WPARAM)gplayers[p_ind].untucked, 0);
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_STRP_ANTA),gplayers[p_ind].ankle_tape);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_STRP_GLOV),gplayers[p_ind].gloves);
+
+		_itow_s(gplayers[p_ind].mo_hunchd + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUND, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_armd + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMD, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_hunchr + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUNR, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_armr + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMR, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_ck + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_CK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_fk + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_FK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].mo_pk + 1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_PK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].gc1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC1, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(gplayers[p_ind].gc2, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(giPesVersion>=20)
+		{
+			_itow_s(gplayers[p_ind].mo_drib, buffer, 18, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_MOTI_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		match = false;
+		for(ii=0;ii<gnum_teams;ii++)
+		{
+			for(jj=0;jj < gteams->team_max;jj++)
+			{
+				if(gteams[ii].players[jj]==gplayers[p_ind].id)
+				{
+					match = true;
+					break;
+				}
+			}
+			if(match)
+			{
+				gplayers[p_ind].team_ind = ii;
+				gplayers[p_ind].team_lineup_ind = jj;
+
+				SendDlgItemMessage(ghw_main, IDT_TEAM_NAME, WM_SETTEXT, 0, (LPARAM)gteams[ii].name);
+
+				_itow_s(gteams[ii].id, buffer, 12, 10);
+				SendDlgItemMessage(ghw_main, IDT_TEAM_ID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				mbstowcs(buffer, gteams[ii].short_name, 18);
+				SendDlgItemMessage(ghw_main, IDT_TEAM_SHORT, WM_SETTEXT, 0, (LPARAM)buffer);
+				
+				_itow_s(gteams[ii].numbers[jj], buffer, 12, 10);
+				SendDlgItemMessage(ghw_main, IDT_PLAY_NUM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				//If is captain, mark the radio button, otherwise clear it
+				if(gteams[ii].players[gteams[ii].captain_ind] == gplayers[p_ind].id)
+					SendDlgItemMessage(ghw_main, IDB_CAPTAIN, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+				else
+					SendDlgItemMessage(ghw_main, IDB_CAPTAIN, BM_SETCHECK, (WPARAM)BST_UNCHECKED, 0);
+
+				//Update Team tab
+				_itow_s((int)gteams[ii].color1_red, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				_itow_s((int)gteams[ii].color1_green, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				_itow_s((int)gteams[ii].color1_blue, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				InvalidateRect(GetDlgItem(ghw_tab3, IDB_TCOLOR1), NULL, TRUE);
+
+				_itow_s((int)gteams[ii].color2_red, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				_itow_s((int)gteams[ii].color2_green, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				_itow_s((int)gteams[ii].color2_blue, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				InvalidateRect(GetDlgItem(ghw_tab3, IDB_TCOLOR2), NULL, TRUE);
+
+				_itow_s((int)gteams[ii].manager_id, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_MANAGER, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				_itow_s((int)gteams[ii].stadium_id, buffer, 12, 10);
+				SendDlgItemMessage(ghw_tab3, IDT_STADIUM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+				break;
+			}
+		}
+	}
+	else //No currently selected player (no players on team), blank out fields
+	{
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)L"");
+
+		SendDlgItemMessage(ghw_main, IDT_PLAY_ID, WM_SETTEXT, 0, (LPARAM)L"");
+
+		buffer[0] = L'\0';
+		//buffer[1] = L'\0';
+		SendDlgItemMessage(ghw_main, IDT_PLAY_SHIRT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NAT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_main, IDT_PLAY_WGT, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_main, IDT_PLAY_AGE, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		Button_SetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT),BST_UNCHECKED);
+
+		SendDlgItemMessage(ghw_main, IDC_PLAY_FOOT, CB_SETCURSEL, (WPARAM)0, 0);
+		if(giPesVersion>=20)
+			SendDlgItemMessage(ghw_tab2, IDC_PLAY_HAND, CB_SETCURSEL, (WPARAM)0, 0);
+		
+		SendDlgItemMessage(ghw_main, IDC_PLAY_RPOS, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_SETCURSEL, (WPARAM)0, 0);
+
+		for(ii=0;ii<13;ii++)
+		{
+			SendDlgItemMessage(ghw_tab1, IDS_PLAY_CF+ii, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)0);
+		}
+
+		for(ii=0;ii<7;ii++)
+		{
+			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_COM_TRIC+ii),0);
+		}
+
+		int numSkill;
+		if(giPesVersion==19) numSkill=39;
+		else if(giPesVersion>=20) numSkill=41;
+		else numSkill=28;
+		for(ii=0;ii<numSkill;ii++)
+		{
+			Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii),0);
+		}
+		int blank_val = 40;
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BCON, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOWP, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOFT, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FINI, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_PKIC, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SWER, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_HEAD, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_DEFP, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BWIN, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_KPOW, WM_SETTEXT, 0, (LPARAM)buffer);	
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_SPED, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_EXPL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_BODB, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		//if(giPesVersion > 16)
+		//{
+			_itow_s(blank_val, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_PHCO, WM_SETTEXT, 0, (LPARAM)buffer);
+		//}
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_JUMP, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_STAM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_GOAL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CATC, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CLEA, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_REFL, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(blank_val, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_COVE, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		//if(giPesVersion>=20)
+		//{
+			_itow_s(blank_val, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_TIPO, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s(blank_val, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab1, IDT_ABIL_AGGR, WM_SETTEXT, 0, (LPARAM)buffer);
+		//}
+
+		_itow_s(1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(1, buffer, 3, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		//if(giPesVersion>=19)
+		//{
+			_itow_s(0, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_STAR, WM_SETTEXT, 0, (LPARAM)buffer);
+		//}
+		//if(giPesVersion>=20)
+		//{
+			_itow_s(0, buffer, 3, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_PLAY_ATT, WM_SETTEXT, 0, (LPARAM)buffer);
+		//}
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_FACE),0);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_HAIR),0);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_PHYS),0);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_STRP),0);
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_COPY_BASE),0);
+
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_COPY_ID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HELE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEWI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEDE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_NELE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_NESI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHHE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHWI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_CHSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_WASI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARLE, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_THSI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_CASI, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_PHYS_LELE, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_PHYS_EYES, CB_SETCURSEL, (WPARAM)0, 0);
+
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_STRP_BOID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_STRP_GLID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_WRTA, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_GLST, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_GLCO, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SLEE, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SLIN, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_SOCK, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_UNDR, CB_SETCURSEL, (WPARAM)0, 0);
+
+		SendDlgItemMessage(ghw_tab2, IDC_STRP_TAIL, CB_SETCURSEL, (WPARAM)0, 0);
+
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_STRP_ANTA),0);
+		Button_SetCheck(GetDlgItem(ghw_tab2, IDB_STRP_GLOV),0);
+
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUND, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMD, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUNR, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMR, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_CK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_FK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(1, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_PK, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC1, WM_SETTEXT, 0, (LPARAM)buffer);
+		_itow_s(0, buffer, 18, 10);
+		SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		if(giPesVersion>=20)
+		{
+			_itow_s(0, buffer, 18, 10);
+			SendDlgItemMessage(ghw_tab2, IDT_MOTI_DRIB, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+
+		//Team info, get from current global team ID:
+		if (gn_teamsel > -1)
+		{
+			SendDlgItemMessage(ghw_main, IDT_TEAM_NAME, WM_SETTEXT, 0, (LPARAM)gteams[gn_teamsel].name);
+
+			_itow_s(gteams[gn_teamsel].id, buffer, 12, 10);
+			SendDlgItemMessage(ghw_main, IDT_TEAM_ID, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			mbstowcs(buffer, gteams[gn_teamsel].short_name, 18);
+			SendDlgItemMessage(ghw_main, IDT_TEAM_SHORT, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+		
+		_itow_s(0, buffer, 12, 10);
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NUM, WM_SETTEXT, 0, (LPARAM)buffer);
+
+		//If is captain, mark the radio button, otherwise clear it
+		SendDlgItemMessage(ghw_main, IDB_CAPTAIN, BM_SETCHECK, (WPARAM)BST_UNCHECKED, 0);
+
+		//Update Team tab
+		InvalidateRect(GetDlgItem(ghw_tab3, IDB_TCOLOR1), NULL, TRUE);
+		InvalidateRect(GetDlgItem(ghw_tab3, IDB_TCOLOR2), NULL, TRUE);
+
+		if (gn_teamsel > -1)
+		{
+			_itow_s((int)gteams[gn_teamsel].color1_red, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].color1_green, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].color1_blue, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].color2_red, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].color2_green, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].color2_blue, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].manager_id, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_MANAGER, WM_SETTEXT, 0, (LPARAM)buffer);
+
+			_itow_s((int)gteams[gn_teamsel].stadium_id, buffer, 12, 10);
+			SendDlgItemMessage(ghw_tab3, IDT_STADIUM, WM_SETTEXT, 0, (LPARAM)buffer);
+		}
+	}
+}
+
+player_entry get_form_player_info(int index)
+{
+	wchar_t buffer[21], wc;
+	int ii, shirtNameLen, playerNameLen;
+	memset(buffer,0,sizeof(buffer));
+	//player_entry output;
+	//if(index<0 || index > gnum_players) return output; //DEBUG, fix
+
+	player_entry output = gplayers[index]; //need to handle case it is empty
+	output.b_changed = true;
+
+	if(giPesVersion<20) playerNameLen=46;
+	else playerNameLen=61;
+	SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)playerNameLen, (LPARAM)output.name);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.id = _wtoi(buffer);
+
+	if(giPesVersion==16) shirtNameLen=16; //This is correct, 15 has 18 len shirt names
+	else if(giPesVersion<20) shirtNameLen=18;
+	else shirtNameLen=20;
+	SendDlgItemMessage(ghw_main, IDT_PLAY_SHIRT, WM_GETTEXT, shirtNameLen+1, (LPARAM)buffer);
+	ii = 0;
+	while(buffer[ii]) 
+	{
+		wc = buffer[ii];
+		buffer[ii] = towupper(wc);
+		ii++;
+	}
+	wcstombs(output.shirt_name, buffer, shirtNameLen);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_NAT, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.nation = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.height = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_WGT, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.weight = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_AGE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.age = _wtoi(buffer);
+
+	if(Button_GetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT))==BST_CHECKED) output.b_edit_player=true;
+	else output.b_edit_player=false;
+
+	output.strong_foot = SendDlgItemMessage(ghw_main, IDC_PLAY_FOOT, CB_GETCURSEL, 0, 0);
+	output.strong_hand = SendDlgItemMessage(ghw_tab2, IDC_PLAY_HAND, CB_GETCURSEL, 0, 0);
+	
+	output.reg_pos = SendDlgItemMessage(ghw_main, IDC_PLAY_RPOS, CB_GETCURSEL, 0, 0);
+
+	ii = SendDlgItemMessage(ghw_main, IDC_PLAY_STYL, CB_GETCURSEL, 0, 0);
+	if((giPesVersion == 15 || giPesVersion==16) && ii>15) ii++; //15 and 16 have unused index 16, left over from 14
+	output.play_style = ii;
+
+	for(ii=0;ii<13;ii++)
+	{
+		output.play_pos[ii] = SendDlgItemMessage(ghw_tab1, IDS_PLAY_CF+ii, TBM_GETPOS, 0, 0);
+	}
+
+	for(ii=0;ii<7;ii++)
+	{
+		if(Button_GetCheck(GetDlgItem(ghw_tab1, IDB_COM_TRIC+ii))==BST_CHECKED) 
+			output.com_style[ii]=true;
+		else output.com_style[ii]=false;
+	}
+
+	int numSkill;
+	if(giPesVersion==19) numSkill=39;
+	else if(giPesVersion>=20) numSkill=41;
+	else numSkill=28;
+	for(ii=0;ii<numSkill;ii++)
+	{
+		if(Button_GetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_SCIS+ii))==BST_CHECKED) 
+			output.play_skill[ii]=true;
+		else output.play_skill[ii]=false;
+	}
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.atk = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_BCON, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.ball_ctrl = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_DRIB, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.drib = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOWP, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.lowpass = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_LOFT, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.loftpass = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_FINI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.finish = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_PKIC, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.place_kick = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_SWER, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.swerve = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_HEAD, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.header = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_DEFP, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.def = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_BWIN, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.ball_win = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_KPOW, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.kick_pwr = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_SPED, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.speed = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_EXPL, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.exp_pwr = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_BODB, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.body_ctrl = _wtoi(buffer);
+
+	if (giPesVersion > 16)
+	{
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_PHCO, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.phys_cont = _wtoi(buffer);
+	}
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_JUMP, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.jump = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_STAM, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.stamina = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_GOAL, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.gk = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_CATC, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.catching = _wtoi(buffer);
+
+	if (giPesVersion > 15)
+	{
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_CLEA, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.clearing = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_REFL, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.reflex = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_COVE, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.cover = _wtoi(buffer);
+	}
+
+	if(giPesVersion>=20)
+	{
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_TIPO, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.tight_pos = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_AGGR, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.aggres = _wtoi(buffer);
+	}
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.weak_use = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.weak_acc = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.form = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.injury = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_STAR, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.star = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab2, IDT_PLAY_ATT, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.play_attit = _wtoi(buffer);
+
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_FACE))==BST_CHECKED) output.b_edit_face=true;
+	else output.b_edit_face=false;
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_HAIR))==BST_CHECKED) output.b_edit_hair=true;
+	else output.b_edit_hair=false;
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_PHYS))==BST_CHECKED) output.b_edit_phys=true;
+	else output.b_edit_phys=false;
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_STRP))==BST_CHECKED) output.b_edit_strip=true;
+	else output.b_edit_strip=false;
+
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_COPY_BASE))==BST_CHECKED) 
+	{
+		output.b_base_copy=true;
+		output.b_edit_ability=true;
+		output.b_edit_com=true;
+		output.b_edit_motion=true;
+		output.b_edit_playpos=true;
+		output.b_edit_regpos=true;
+		output.b_edit_skill=true;
+		output.b_edit_style=true;
+	}
+	else output.b_base_copy=false;
+
+	SendDlgItemMessage(ghw_tab2, IDT_COPY_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.copy_id = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HELE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.head_len = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEWI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.head_wid = _wtoi(buffer) + 7;;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEDE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.head_dep = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_NELE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.neck_len = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_NESI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.neck_size = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHHE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.shldr_hi = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHWI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.shldr_wid = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_CHSI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.chest = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_WASI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.waist = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARSI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.arm_size = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_ARLE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.arm_len = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_THSI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.thigh = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_CASI, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.calf = _wtoi(buffer) + 7;
+
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_LELE, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.leg_len = _wtoi(buffer) + 7;
+
+	output.skin_col = SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_GETCURSEL, 0, 0);
+
+	output.iris_col = SendDlgItemMessage(ghw_tab2, IDC_PHYS_EYES, CB_GETCURSEL, 0, 0);
+
+	SendDlgItemMessage(ghw_tab2, IDT_STRP_BOID, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.boot_id = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab2, IDT_STRP_GLID, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.glove_id = _wtoi(buffer);
+
+	output.wrist_tape = SendDlgItemMessage(ghw_tab2, IDC_STRP_WRTA, CB_GETCURSEL, 0, 0);
+
+	output.spec_style = SendDlgItemMessage(ghw_tab2, IDC_STRP_GLST, CB_GETCURSEL, 0, 0);
+
+	output.spec_col = SendDlgItemMessage(ghw_tab2, IDC_STRP_GLCO, CB_GETCURSEL, 0, 0);
+
+	output.sleeve = SendDlgItemMessage(ghw_tab2, IDC_STRP_SLEE, CB_GETCURSEL, 0, 0);
+
+	output.inners = SendDlgItemMessage(ghw_tab2, IDC_STRP_SLIN, CB_GETCURSEL, 0, 0);
+
+	output.socks = SendDlgItemMessage(ghw_tab2, IDC_STRP_SOCK, CB_GETCURSEL, 0, 0);
+
+	output.undershorts = SendDlgItemMessage(ghw_tab2, IDC_STRP_UNDR, CB_GETCURSEL, 0, 0);
+
+	output.untucked = SendDlgItemMessage(ghw_tab2, IDC_STRP_TAIL, CB_GETCURSEL, 0, 0);
+
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_STRP_ANTA))==BST_CHECKED) output.ankle_tape=true;
+	else output.ankle_tape=false;
+	if(Button_GetCheck(GetDlgItem(ghw_tab2, IDB_STRP_GLOV))==BST_CHECKED) output.gloves=true;
+	else output.gloves=false;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUND, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_hunchd = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMD, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_armd = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_HUNR, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_hunchr = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_ARMR, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_armr = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_CK, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_ck = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_FK, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_fk = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_PK, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_pk = _wtoi(buffer) - 1;
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC1, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.gc1 = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_GC2, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.gc2 = _wtoi(buffer);
+
+	SendDlgItemMessage(ghw_tab2, IDT_MOTI_DRIB, WM_GETTEXT, 18, (LPARAM)buffer);
+	output.mo_drib = _wtoi(buffer);
+
+	return output;
+}
+
+bool get_form_team_info(int player_index, team_entry &output)
+{
+	bool result;
+	wchar_t buffer[71], wc;
+	memset(buffer, 0, sizeof(buffer));
+	char cbuff[4];
+	int ii, ti, tli;
+
+	ti = gplayers[player_index].team_ind;
+	tli = gplayers[player_index].team_lineup_ind;
+
+	result = (ti > -1) && (player_index > -1);
+
+	if(result)
+	{
+		output = gteams[ti];
+		output.b_changed = true;
+
+		SendDlgItemMessage(ghw_main, IDT_TEAM_NAME, WM_GETTEXT, 70, (LPARAM)buffer);
+		if( _tcscmp(buffer,output.name) )
+		{
+			_tcscpy(output.name, buffer);
+			output.b_edit_name = true;
+		}
+
+		SendDlgItemMessage(ghw_main, IDT_TEAM_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.id = _wtoi(buffer);
+
+		//Manually send EN_CHANGE message to avoid edge cases
+		//SendMessage(ghw_main, WM_COMMAND, MAKEWPARAM(IDT_TEAM_SHORT, EN_CHANGE), LPARAM(GetDlgItem(ghw_main, IDT_TEAM_SHORT)));
+		SendDlgItemMessage(ghw_main, IDT_TEAM_SHORT, WM_GETTEXT, 4, (LPARAM)buffer);
+		buffer[4] = 0;
+		ii = 0;
+		while(buffer[ii]) 
+		{
+			wc = buffer[ii];
+			buffer[ii] = towupper(wc);
+			ii++;
+		}
+		wcstombs(cbuff,buffer,4);
+		if( strcmp(cbuff,output.short_name) )
+		{
+			strcpy(output.short_name, cbuff);
+			output.b_edit_name = true;
+			output.b_edit_shortname = true;
+		}
+		
+		SendDlgItemMessage(ghw_main, IDT_PLAY_NUM, WM_GETTEXT, 18, (LPARAM)buffer);
+		output.numbers[tli] = _wtoi(buffer);
+		if(giPesVersion < 19 && output.numbers[tli]>231) output.numbers[tli] = 231;
+
+		//Get info from Team tab
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color1_red = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color1_green = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color1_blue = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color2_red = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color2_green = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_GETTEXT, 4, (LPARAM)buffer);
+		output.color2_blue = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_MANAGER, WM_GETTEXT, 9, (LPARAM)buffer);
+		output.manager_id = _wtoi(buffer);
+
+		SendDlgItemMessage(ghw_tab3, IDT_STADIUM, WM_GETTEXT, 4, (LPARAM)buffer);
+		if( output.stadium_id != _wtoi(buffer) )
+		{
+			output.stadium_id = _wtoi(buffer);
+			output.b_edit_stadium = true;
+		}
+	}
+
+	return result;
+}
+
+//Subclassed control procedure for a listview control.  Used by the
+// IDC_PATH_LIST backup path list
+LRESULT CALLBACK lv_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SETCOLUMN:
+		{
+			//User-defined message to keep the columns of the backup 
+			// paths LV tidy.  Called when client area size changes
+			// (e.g. a scrollbar is added), it aligns the column widths
+			// with the client area width, unless they were already set
+			// to be wider than the client area.
+			RECT rc_lv;
+			GetClientRect(H, &rc_lv);
+
+			ListView_SetColumnWidth(H, 0, rc_lv.right);
+			
+			return true;
+		}
+
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy;
+			//RECT parent_rect;
+
+			//GetClientRect(ghw_main, &parent_rect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			//BringWindowToTop(H);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			SetWindowPos(H, HWND_TOP, X-g_prevx, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_SIZE:
+		{
+			//ListView_SetColumnWidth(H, 1, LVSCW_AUTOSIZE_USEHEADER);
+			PostMessage(H,UM_SETCOLUMN,0,0);
+			return DefSubclassProc(H, M, W, L);
+		}
+
+		case WM_KEYDOWN:
+		{
+			if( W == 0x21 || W == 0x22 ) //We want ONLY default behavior for PGUP and PGDN
+				return DefSubclassProc(H, M, W, L);
+			common_shortcuts(W);
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+//Subclassed control procedure for a combobox control.  Used by the
+// IDC_TEAM_LIST combobox
+LRESULT CALLBACK cb_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			SetWindowPos(H, HWND_TOP, X-g_prevx, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			//When T key is pressed - CTRL+SHIFT+T trims the team lists to max 23 players each
+			if( W == 0x54 && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) )
+			{
+				int ii=0;
+				while(ii< gteams->team_max && gteams[gn_teamsel].players[ii]!=0)
+				{
+					if(ii>22) gteams[gn_teamsel].players[ii]=0;
+					ii++;
+				}
+				gteams[gn_teamsel].b_changed = true;
+				//SendMessage(ghw_main, WM_COMMAND, MAKEWPARAM(IDC_TEAM_LIST,CBN_SELCHANGE), 0);
+				trim_team();
+				return true;
+			}
+			else
+				common_shortcuts(W);
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+
+//Subclassed control procedure for a combobox control.  Used by the
+// non-IDC_TEAM_LIST comboboxes
+LRESULT CALLBACK cb2_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			SetWindowPos(H, HWND_TOP, X-g_prevx, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+			if( W == 0x21 || W == 0x22 ) //We don't want default behavior for PGUP and PGDN
+				return true;
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+
+//Subclassed control procedure
+LRESULT CALLBACK scale_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy, offset=0;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+
+			if(GetParent(H)==ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_TOPMOST, X-offset, Y, cx, cy, SWP_NOREDRAW|SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+		}
+		break;
+
+		case WM_DESTROY:
+		{
+			delete (RECT*)dwRefData;
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+
+//Subclassed control procedure
+LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy, offset=0;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			if(GetParent(H)==ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_NOTOPMOST, X-offset, Y, cx, cy, SWP_NOREDRAW|SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			//SetWindowPos(H, HWND_TOP, X, Y, cx, cy, SWP_NOACTIVATE);
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+		}
+		break;
+
+		case WM_LBUTTONDOWN:
+		{
+			if (!gb_is_dragging && gb_tactics_enabled)
+			{
+				long id = GetWindowLong(H, GWL_ID);
+				if ((id >= IDB_TACT_PL1 && id <= IDB_TACT_PL11) || (id >= IDC_STATIC_PL1 && id <= IDC_STATIC_PL11))
+				{
+					POINT pos;
+					GetCursorPos(&pos);
+					MapWindowPoints(NULL, ghw_tab4, &pos, 1);
+
+					int player_index = -1;
+					if (id <= IDB_TACT_PL11) player_index = id - IDB_TACT_PL1;
+					else player_index = id - IDC_STATIC_PL1;
+
+					//If click is in bounds of the field, track where it started and who was clicked
+					if (pos.x >= 222 && pos.x <= 482 && pos.y >= 20 && pos.y <= 370)
+					{
+						if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+						{
+							gb_is_dragging = true;
+							gi_drag_x = pos.x;
+							gi_drag_y = pos.y;
+						}
+
+						if (player_index != gi_selected_player_field)
+						{
+							gb_updating_tactics = true;
+
+							int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+							int player_id = teamOffset + gteams[gn_teamsel].starting11[player_index];
+							for (int ii = 0; ii < gnum_players; ii++)
+							{
+								if (gplayers[ii].id == player_id)
+								{
+									SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
+
+									wchar_t buff_x[4], buff_y[4];
+									swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].x);
+									swprintf_s(buff_y, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+
+									if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos - 1, 0);
+										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+										EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+										EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+									}
+									else
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+										EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+										EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+									}
+									break;
+								}
+							}
+
+							if (gi_selected_player_bench != -1)
+							{
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), TRUE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+							}
+							gi_selected_player_field = player_index;
+							gb_updating_tactics = false;
+						}
+
+						if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
+						{
+							RECT bounds;
+							GetWindowRect(GetDlgItem(ghw_tab4, IDB_TACT_BG), &bounds);
+							ClipCursor(&bounds);
+						}
+					}
+				}
+			}
+		}
+		break;
+
+		case WM_MOUSEMOVE:
+		{
+			if (gb_is_dragging && gb_tactics_enabled)
+			{
+				gb_updating_tactics = true;
+				POINT pos;
+				GetCursorPos(&pos);
+				MapWindowPoints(NULL, ghw_tab4, &pos, 1);
+
+				int x_range = -1, y_range = -1;
+				double width = 260.0, height = 350.0;
+				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				{
+					x_range = 0x68;
+					y_range = 0x30;
+				}
+
+				//If beyond minimum increment, move player
+				if (abs(gi_drag_x - pos.x) > (width / x_range) || abs(gi_drag_y - pos.y) > (height / y_range))
+				{
+					int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+					int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
+					int player_x = round((double)(pos.x - 222) / (width / x_range));
+					int player_y = y_range - round((double)(pos.y - 20) / (height / y_range)); //y-scale is inverted
+					
+					set_player_xy(gi_selected_player_field, player_id, -1, player_x, player_y, false, false);
+
+					if (abs(gi_drag_x - pos.x) > (width / x_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = player_x;
+						wchar_t buff_x[4];
+						swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+						gi_drag_x = pos.x;
+						gteams[gn_teamsel].b_changed = true;
+					}
+					if (abs(gi_drag_y - pos.y) > (height / y_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = player_y;
+						wchar_t buff_y[4];
+						swprintf_s(buff_y, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+						gi_drag_y = pos.y;
+						gteams[gn_teamsel].b_changed = true;
+					}
+
+					if (abs(gi_drag_x - pos.x) > (width / x_range)) gi_drag_x = pos.x;
+					if (abs(gi_drag_y - pos.y) > (height / y_range)) gi_drag_y = pos.y;
+				}
+				gb_updating_tactics = false;
+			}
+		}
+		break;
+
+		//Formation mouse drag support
+		case WM_LBUTTONUP:
+		{
+			if (gb_is_dragging)
+			{
+				gb_is_dragging = false;
+				gb_updating_tactics = true;
+
+				ClipCursor(NULL);
+
+				//Update the x/y values
+				POINT pos;
+				GetCursorPos(&pos);
+				MapWindowPoints(NULL, ghw_tab4, &pos, 1);
+
+				int x_range = -1, y_range = -1;
+				double width = 260.0, height = 350.0;
+				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				{
+					x_range = 0x68;
+					y_range = 0x30;
+				}
+
+				if (abs(gi_drag_x - pos.x) > (width / x_range) || abs(gi_drag_y - pos.y) > (height / y_range))
+				{
+					int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+					int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
+					int player_x = round((double)(pos.x - 222) / (width / x_range));
+					int player_y = y_range - round((double)(pos.y - 20) / (height / y_range)); //y-scale is inverted
+
+					set_player_xy(gi_selected_player_field, player_id, -1, player_x, player_y, false, false);
+
+					if (abs(gi_drag_x - pos.x) > (width / x_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = player_x;
+						wchar_t buff_x[4];
+						swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+						gi_drag_x = pos.x;
+						gteams[gn_teamsel].b_changed = true;
+					}
+					if (abs(gi_drag_y - pos.y) > (height / y_range))
+					{
+						gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = player_y;
+						wchar_t buff_y[4];
+						swprintf_s(buff_y, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+						SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+						gi_drag_y = pos.y;
+						gteams[gn_teamsel].b_changed = true;
+					}
+				}
+
+				gi_drag_x = -1;
+				gi_drag_y = -1;
+
+				//Redraw the region because the entire process of draging a player is a graphical mess
+				RECT rectFormation = create_rect(217, 5, 270, 370);
+				RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+				gb_updating_tactics = false;
+			}
+		}
+		break;
+
+		case WM_DESTROY:
+		{
+			delete (RECT*)dwRefData;
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+
+//Subclassed control procedure for the last control in the main dialog
+// tab order.  I need this special proc to force the tab order to include
+// the tab control itself - the tab has the WS_EX_CONTROLPARENT style so
+// that its child controls will be appended to the main dialog tab order,
+// but as a result the tab control itself is invisible to the tab order.
+// This subproc overrides that behavior, forcing a TAB key press on the
+// item to transfer focus to the tab control itself.
+// The 'Cancel' button (IDB_CANCEL_BKUP) uses this proc
+LRESULT CALLBACK onto_tab_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case WM_CHAR:
+		{
+			//To prevent 'ding' sounding when TAB key is pressed with 
+			// this item selected, skip default handling of char 13 (TAB)
+			if( W==9 ) return true;
+			return DefSubclassProc(H, M, W, L);
+		}
+
+		case WM_KEYDOWN:
+		{
+			if( W==VK_TAB )
+			{
+				//When the TAB key is pressed, pass focus to the tab control
+				//SendMessage(ghw_main, WM_NEXTDLGCTL, (WPARAM)ghw_tabcon, (LPARAM)TRUE);
+				SetFocus(ghw_tabcon);
+
+				return true;
+			}
+			else
+			{
+				common_shortcuts(W);
+
+				if( W == 0x21 || W == 0x22 ) //We don't want default behavior for PGUP and PGDN
+					return true;
+			}
+			break;
+		}
+
+		case WM_GETDLGCODE:
+		{
+			//Request that this control handles the WM_KEYDOWN and the
+			// WM_CHAR messages for the TAB key itself
+			if( L && ((MSG *)L)->message == WM_KEYDOWN &&
+				((MSG *)L)->wParam == VK_TAB )
+				return DLGC_WANTMESSAGE;
+			else if( L && ((MSG *)L)->message == WM_CHAR &&
+				((MSG *)L)->wParam == 9 )
+				return DLGC_WANTMESSAGE;
+
+			break;
+		}
+
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			SetWindowPos(H, HWND_TOPMOST, X-g_prevx, Y, cx, cy, SWP_NOREDRAW|SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_DESTROY:
+		{
+			delete (RECT*)dwRefData;
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+//Subclassed control procedure for the tab control to pass focus to the
+// first item of the currently displayed tab page when TAB is pressed,
+// resuming the regular tabbing order.
+LRESULT CALLBACK from_tab_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case WM_KEYDOWN:
+		{
+			if( W==VK_TAB )
+			{
+				HWND h_tab_to;
+				int i_tab = TabCtrl_GetCurSel(H);
+				
+				if( i_tab==0 ) h_tab_to = GetDlgItem(ghw_tab1,IDS_PLAY_CF);
+				else if(i_tab==1) h_tab_to = GetDlgItem(ghw_tab2,IDB_EDIT_FACE);
+				else h_tab_to = GetDlgItem(ghw_tab3,IDT_TCOL_R1);
+
+				//SendMessage(ghw_main, WM_NEXTDLGCTL, (WPARAM)h_tab_to, (LPARAM)TRUE);
+				SetFocus(h_tab_to);
+				return true;
+			}
+			else 
+				common_shortcuts(W);
+
+			break;
+		}
+
+		case WM_GETDLGCODE:
+		{
+			//Request that this control handles the WM_KEYDOWN message
+			// for the TAB key itself
+			if( L && ((MSG *)L)->message == WM_KEYDOWN &&
+				((MSG *)L)->wParam == VK_TAB )
+				return DLGC_WANTMESSAGE;
+
+			break;
+		}
+
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			SetWindowPos(H, HWND_TOPMOST, X-g_prevx, Y, cx, cy, SWP_NOREDRAW|SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_DESTROY:
+		{
+			delete (RECT*)dwRefData;
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+LRESULT CALLBACK tab_two_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			//float scale = *(float*)L;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy, offset = 0;
+
+			//GetWindowRect(H, &winrect);
+			//MapWindowPoints(HWND_DESKTOP, GetParent(H), (LPPOINT)&winrect, 2);
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			if(GetParent(H)==ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_TOP, X-offset, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+			
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+		}
+		break;
+
+		case WM_COMMAND:
+		{
+			switch(LOWORD(W))
+			{
+				case IDB_MOTI_RAND:
+				{
+					if(HIWORD(W)==BN_CLICKED)
+					{
+						int val;
+						wchar_t buffer[4];
+
+						int hunchMax = 3;
+						int armMax = 8;
+						int ckMax = 6;
+						int fkMax = 16;
+						int pkMax = 4;
+						int gcMax = 122;
+						if(giPesVersion>=20)
+						{
+							hunchMax = 5;
+							armMax = 10;
+							ckMax = 10;
+							fkMax = 20;
+							pkMax = 7;
+							gcMax = 162;
+						}
+
+
+						val = rand() % hunchMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_HUND, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % armMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_ARMD, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % hunchMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_HUNR, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % armMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_ARMR, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % ckMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_CK, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % fkMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_FK, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % pkMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_PK, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % gcMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_GC1, WM_SETTEXT, 0, (LPARAM)buffer);
+
+						val = rand() % gcMax + 1;
+						_itow_s(val, buffer, 4, 10);
+						SendDlgItemMessage(H, IDT_MOTI_GC2, WM_SETTEXT, 0, (LPARAM)buffer);
+					}
+				}
+				break;
+			}
+		}
+        break;
+    }
+    return DefSubclassProc(H, M, W, L);
+}
+
+
+LRESULT CALLBACK tab_three_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+					UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch(M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			resize_info *pri = (resize_info*)L;
+			int X, Y, cx, cy, offset = 0;
+
+			X = ceil(pri->scale*winrect.left);
+			Y = ceil(pri->scale*winrect.top);
+			cx = ceil(pri->scale*(winrect.right-winrect.left));
+			cy = ceil(pri->scale*(winrect.bottom-winrect.top));
+			if(GetParent(H)==ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_TOP, X-offset, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+			
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			common_shortcuts(W);
+		}
+		break;
+
+		case WM_CTLCOLORBTN:
+		{
+			if(gplayers)
+			{
+				int red, green, blue;
+				wchar_t buffer[5];
+				if((HWND)L == GetDlgItem(H, IDB_TCOLOR1))
+				{
+					DeleteObject(gTeamColor1);
+
+					//p_ind = gn_playind[gn_listsel];
+					//t_ind = gplayers[p_ind].team_ind;
+					//red = floor(4.05*gteams[t_ind].color1_red);
+					//green = floor(4.05*gteams[t_ind].color1_green);
+					//blue = floor(4.05*gteams[t_ind].color1_blue);
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_GETTEXT, 4, (LPARAM)buffer);
+					red = floor(4.05*_wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_GETTEXT, 4, (LPARAM)buffer);
+					green = floor(4.05*_wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_GETTEXT, 4, (LPARAM)buffer);
+					blue = floor(4.05*_wtoi(buffer));
+					gTeamColor1 = CreateSolidBrush(RGB(red, green, blue));
+					return (INT_PTR)gTeamColor1;
+				}
+				else if((HWND)L == GetDlgItem(H, IDB_TCOLOR2))
+				{
+					DeleteObject(gTeamColor2);
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_GETTEXT, 4, (LPARAM)buffer);
+					red = floor(4.05*_wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_GETTEXT, 4, (LPARAM)buffer);
+					green = floor(4.05*_wtoi(buffer));
+
+					SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_GETTEXT, 4, (LPARAM)buffer);
+					blue = floor(4.05*_wtoi(buffer));
+					gTeamColor2 = CreateSolidBrush(RGB(red, green, blue));
+					return (INT_PTR)gTeamColor2;
+				}
+			}
+		}
+        break;
+
+		case WM_COMMAND:
+		{
+			switch(HIWORD(W))
+			{
+				case EN_CHANGE:
+				{
+					int test=0;
+					switch(LOWORD(W))
+					{
+						case IDT_TCOL_R1:
+						case IDT_TCOL_G1:
+						case IDT_TCOL_B1:
+						{
+							InvalidateRect(GetDlgItem(H, IDB_TCOLOR1), NULL, TRUE);
+						}
+						break;
+
+						case IDT_TCOL_R2:
+						case IDT_TCOL_G2:
+						case IDT_TCOL_B2:
+						{
+							InvalidateRect(GetDlgItem(H, IDB_TCOLOR2), NULL, TRUE);
+						}
+						break;
+					}
+				}
+				break;
+
+				case BN_CLICKED:
+				{
+					switch(LOWORD(W))
+					{
+						case IDB_TCOLOR1:
+						{
+							int red, green, blue;
+							wchar_t buffer[5];
+							COLORREF acrCustClr[16] = {RGB(0, 0, 0),
+													    RGB(255, 0, 0),
+														RGB(0, 255, 0),
+														RGB(0, 0, 255),
+														RGB(255, 255, 0),
+														RGB(0, 255, 255),
+														RGB(255, 255, 255),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0)};
+							CHOOSECOLOR cc;
+							ZeroMemory(&cc, sizeof(cc));
+
+							if(gplayers)
+							{
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_GETTEXT, 4, (LPARAM)buffer);
+								red = floor(4.05*_wtoi(buffer));
+
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_GETTEXT, 4, (LPARAM)buffer);
+								green = floor(4.05*_wtoi(buffer));
+
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_GETTEXT, 4, (LPARAM)buffer);
+								blue = floor(4.05*_wtoi(buffer));
+
+								cc.lStructSize = sizeof(cc);
+								cc.hwndOwner = ghw_main; //H;
+								cc.rgbResult = RGB(red, green, blue);
+								cc.lpCustColors = acrCustClr;
+								cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+								if (ChooseColor(&cc)==TRUE) 
+								{
+									red = GetRValue(cc.rgbResult); 
+									green = GetGValue(cc.rgbResult); 
+									blue = GetBValue(cc.rgbResult); 
+								}
+
+								_itow_s(ceil(red/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_R1, WM_SETTEXT, NULL, (LPARAM)buffer);
+								_itow_s(ceil(green/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_G1, WM_SETTEXT, NULL, (LPARAM)buffer);
+								_itow_s(ceil(blue/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_B1, WM_SETTEXT, NULL, (LPARAM)buffer);
+
+								InvalidateRect(GetDlgItem(H, IDB_TCOLOR1), NULL, TRUE);
+							}
+						}
+						break;
+
+						case IDB_TCOLOR2:
+						{
+							int red, green, blue;
+							wchar_t buffer[5];
+							COLORREF acrCustClr[16] = {RGB(0, 0, 0),
+													    RGB(255, 0, 0),
+														RGB(0, 255, 0),
+														RGB(0, 0, 255),
+														RGB(255, 255, 0),
+														RGB(0, 255, 255),
+														RGB(255, 255, 255),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0),
+														RGB(0, 0, 0)};
+							CHOOSECOLOR cc;
+							ZeroMemory(&cc, sizeof(cc));
+
+							if(gplayers)
+							{
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_GETTEXT, 4, (LPARAM)buffer);
+								red = floor(4.05*_wtoi(buffer));
+
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_GETTEXT, 4, (LPARAM)buffer);
+								green = floor(4.05*_wtoi(buffer));
+
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_GETTEXT, 4, (LPARAM)buffer);
+								blue = floor(4.05*_wtoi(buffer));
+
+								cc.lStructSize = sizeof(cc);
+								cc.hwndOwner = ghw_main; //H;
+								cc.rgbResult = RGB(red, green, blue);
+								cc.lpCustColors = acrCustClr;
+								cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+								if (ChooseColor(&cc)==TRUE) 
+								{
+									red = GetRValue(cc.rgbResult); 
+									green = GetGValue(cc.rgbResult); 
+									blue = GetBValue(cc.rgbResult); 
+								}
+
+								_itow_s(ceil(red/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_R2, WM_SETTEXT, NULL, (LPARAM)buffer);
+								_itow_s(ceil(green/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_G2, WM_SETTEXT, NULL, (LPARAM)buffer);
+								_itow_s(ceil(blue/4.05), buffer, 4, 10);
+								SendDlgItemMessage(ghw_tab3, IDT_TCOL_B2, WM_SETTEXT, NULL, (LPARAM)buffer);
+
+								InvalidateRect(GetDlgItem(H, IDB_TCOLOR2), NULL, TRUE);
+							}
+						}
+						break;
+					}
+				}
+				break;
+			}
+		}
+		break;
+    }
+    return DefSubclassProc(H, M, W, L);
+}
+
+LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	int teamOffset = -1;
+	if (gteams && gn_teamsel && gn_teamsel != -1)
+	{
+		teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	}
+
+	switch (M)
+	{
+		case UM_SCALE:
+		{
+			RECT winrect = *(RECT*)dwRefData;
+			resize_info* pri = (resize_info*)L;
+			int X, Y, cx, cy, offset = 0;
+
+			X = ceil(pri->scale * winrect.left);
+			Y = ceil(pri->scale * winrect.top);
+			cx = ceil(pri->scale * (winrect.right - winrect.left));
+			cy = ceil(pri->scale * (winrect.bottom - winrect.top));
+			if (GetParent(H) == ghw_main)
+				offset = g_prevx;
+			SetWindowPos(H, HWND_TOP, X - offset, Y, cx, cy, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+
+			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+		}
+		break;
+
+		case WM_KEYDOWN:
+		{
+			if (gb_is_dragging)
+			{
+				gb_is_dragging = false;
+				gi_drag_x = -1;
+				gi_drag_y = -1;
+
+				ClipCursor(NULL);
+			}
+
+			common_shortcuts(W);
+		}
+		break;
+
+		//Formation mouse drag support
+		case WM_LBUTTONUP:
+		{
+			if (gb_is_dragging)
+			{
+				gb_is_dragging = false;
+				gi_drag_x = -1;
+				gi_drag_y = -1;
+
+				ClipCursor(NULL);
+			}
+		}
+		break;
+
+		case WM_DRAWITEM:
+		{
+			LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)L; // item drawing information
+			if (lpdis->CtlType == ODT_BUTTON)
+			{
+				switch (LOWORD(W))
+				{
+					case IDB_TACT_PL1:
+					case IDB_TACT_PL2:
+					case IDB_TACT_PL3:
+					case IDB_TACT_PL4:
+					case IDB_TACT_PL5:
+					case IDB_TACT_PL6:
+					case IDB_TACT_PL7:
+					case IDB_TACT_PL8:
+					case IDB_TACT_PL9:
+					case IDB_TACT_PL10:
+					case IDB_TACT_PL11:
+					case IDB_TACT_BN1:
+					case IDB_TACT_BN2:
+					case IDB_TACT_BN3:
+					case IDB_TACT_BN4:
+					case IDB_TACT_BN5:
+					case IDB_TACT_BN6:
+					case IDB_TACT_BN7:
+					case IDB_TACT_BN8:
+					case IDB_TACT_BN9:
+					case IDB_TACT_BN10:
+					case IDB_TACT_BN11:
+					case IDB_TACT_BN12:
+					{
+						HDC hdc = lpdis->hDC;
+						RECT rc = lpdis->rcItem;
+						COLORREF bkColor;
+
+						TCHAR buffer[4];
+						GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 4);
+						if (wcscmp(buffer, L"GK") == 0)
+							bkColor = RGB(219, 161, 19);
+						else if (wcscmp(buffer, L"LB") == 0 || wcscmp(buffer, L"RB") == 0 || wcscmp(buffer, L"CB") == 0)
+							bkColor = RGB(36, 105, 217);
+						else if (wcscmp(buffer, L"CMF") == 0 ||  wcscmp(buffer, L"AMF") == 0 || wcscmp(buffer, L"DMF") == 0 || wcscmp(buffer, L"LMF") == 0 || wcscmp(buffer, L"RMF") == 0)
+							bkColor = RGB(75, 159, 35);
+						else if (wcscmp(buffer, L"SS") == 0 || wcscmp(buffer, L"CF") == 0 ||wcscmp(buffer, L"LWF") == 0 || wcscmp(buffer, L"RWF") == 0)
+							bkColor = RGB(190, 38, 46);
+						else
+							bkColor = RGB(0, 0, 0);
+
+						HBRUSH brush = CreateSolidBrush(bkColor);
+						FillRect(hdc, &rc, brush);
+						DeleteObject(brush);
+
+						//HBRUSH hBorder = CreateSolidBrush(RGB(44, 62, 80));
+						//FrameRect(hdc, &rc, hBorder);
+						//DeleteObject(hBorder);
+
+						SetBkMode(hdc, TRANSPARENT);
+						SetTextColor(hdc, RGB(255, 255, 255));
+						DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+						DeleteObject(hdc);
+					}
+					break;
+					default:
+						break;
+				}
+
+			}
+			else if (lpdis->CtlType == ODT_STATIC)
+			{
+				switch (LOWORD(W))
+				{
+					case IDB_TACT_BG:
+					{
+						int width = 260, height = 350;
+
+						HDC hdc = lpdis->hDC;
+						HBRUSH brush;
+						COLORREF bg1 = RGB(67, 102, 34), bg2 = RGB(77, 116, 44), lineColor = RGB(255, 255, 255);
+
+						for (int ii = 0; ii < 7; ii++)
+						{
+							RECT rectBg = create_rect(0, (ii * 50), width, 50);
+							brush = CreateSolidBrush(ii % 2 == 1 ? bg1 : bg2);
+							FillRect(hdc, &rectBg, brush);
+							DeleteObject(brush);
+						}
+
+						RECT rectCenterLine = create_rect(0, (height / 2) - 1, width, 2);
+						brush = CreateSolidBrush(lineColor);
+						FillRect(hdc, &rectCenterLine, brush);
+						DeleteObject(brush);
+
+						HPEN pen = CreatePen(PS_SOLID, 2, lineColor);
+						SelectObject(hdc, GetStockObject(NULL_BRUSH));
+						SelectObject(hdc, pen);
+						Ellipse(hdc, width / 2 - 35, height / 2 - 35, width / 2 + 35, height / 2 + 35);
+						Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), 50);
+						Rectangle(hdc, width / 4, 300, (width / 4) + (width / 2), 352);
+
+						DeleteObject(pen);
+						DeleteObject(hdc);
+					}
+					break;
+					case IDB_TACT_BG2:
+					{
+						int width = 173, height = 350;
+
+						HDC hdc = lpdis->hDC;
+						HBRUSH brush;
+						COLORREF bg = RGB(240, 240, 240);
+
+						RECT rectCenterLine = create_rect(0, 0, width, height);
+						brush = CreateSolidBrush(bg);
+						FillRect(hdc, &rectCenterLine, brush);
+						DeleteObject(brush);
+						DeleteObject(hdc);
+					}
+					break;
+
+					default:
+					{
+						HDC hdc = lpdis->hDC;
+						RECT rc = lpdis->rcItem;
+
+						TCHAR buffer[256];
+						GetDlgItemText(ghw_tab4, LOWORD(W), buffer, 256);
+
+						if (gi_selected_player_bench != -1 && gi_selected_player_bench + IDC_STATIC_BN1 == LOWORD(W))
+						{
+							SetBkMode(hdc, OPAQUE);
+							SetBkColor(hdc, RGB(192, 192, 192));
+						}
+						else if (LOWORD(W) >= IDC_STATIC_PL1 && LOWORD(W) <= IDC_STATIC_PL11)
+						{
+							SetBkMode(hdc, TRANSPARENT);
+						}
+
+
+						SetTextColor(hdc, RGB(0, 0, 0));
+						if (LOWORD(W) < IDC_STATIC_BN1)
+							DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+						else
+							DrawText(hdc, buffer, -1, &rc, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+						DeleteObject(hdc);
+					}
+					break;
+				}
+			}
+		}
+		break;
+
+		case WM_COMMAND:
+		{
+			switch (HIWORD(W))
+			{
+				case CBN_SELCHANGE:
+				{
+					switch (LOWORD(W))
+					{
+						case IDC_TACT_PRESET:
+						{
+							if (gb_tactics_enabled)
+							{
+								gb_updating_tactics = true;
+								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_GETCURSEL, 0, 0);
+								//Reset formation to kick-off
+								SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+
+								if (gi_selected_player_field != -1)
+								{
+									wchar_t buff_x[4], buff_y[3];
+									swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[sel].formations[0].players[gi_selected_player_field].x);
+									swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[sel].formations[0].players[gi_selected_player_field].y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+									SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[sel].formations[gi_formation].players[gi_selected_player_field].pos - 1, 0);
+								}
+
+								populate_tactics_tab(teamOffset, sel, 0, false, true);
+								gb_updating_tactics = false;
+							}
+						}
+						break;
+
+						case IDC_TACT_FORM:
+						{
+							if (gb_tactics_enabled)
+							{
+								gb_updating_tactics = true;
+								int sel = SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_GETCURSEL, 0, 0);
+								//Only repopulate if fluid
+								if (gteams[gn_teamsel].presets[gi_preset].fluid)
+								{
+									for (int ii = 0; ii < 11; ii++)
+									{
+										player_formation_data player = gteams[gn_teamsel].presets[gi_preset].formations[sel].players[ii];
+										set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
+									}
+									RECT rectFormation = create_rect(217, 5, 270, 370);
+									RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+								}
+
+								if (gi_selected_player_field != -1)
+								{
+									wchar_t buff_x[4], buff_y[3];
+									swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[sel].players[gi_selected_player_field].x);
+									swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[sel].players[gi_selected_player_field].y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+									SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[sel].players[gi_selected_player_field].pos - 1, 0);
+								}
+
+								gi_formation = sel;
+								gb_updating_tactics = false;
+							}
+						}
+						break;
+
+						case IDC_TACT_PLPOS:
+						{
+							if (gb_tactics_enabled && !gb_updating_tactics)
+							{
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, pos_ind, 0);
+								int current_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
+								int current_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos = pos;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, pos, current_x, current_y);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_ASTY:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].attacking_style = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_BLD:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].buildup = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AZON:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].attacking_zone = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_SLDPOS:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].positioning = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_ANUM:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].numbers_in_attack = val + 1;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_DSTY:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_DSTY, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].defensive_style = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_CAREA:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].containment_area = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_PRES:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].pressure = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_DNUM:
+						{
+							if (gb_tactics_enabled)
+							{
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_GETCURSEL, 0, 0);
+								gteams[gn_teamsel].presets[gi_preset].numbers_in_defense = val + 1;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_FKLG:
+						case IDC_TACT_FKSH:
+						case IDC_TACT_FK2:
+						case IDC_TACT_CKL:
+						case IDC_TACT_CKR:
+						case IDC_TACT_PK:
+						case IDC_TACT_PTJ1:
+						case IDC_TACT_PTJ2:
+						case IDC_TACT_PTJ3:
+						{
+							if (gb_tactics_enabled)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, LOWORD(W), CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, LOWORD(W), CB_GETITEMDATA, index, 0);
+
+								if (LOWORD(W) == IDC_TACT_FKLG)
+									gteams[gn_teamsel].fk_taker_long = val;
+								else if (LOWORD(W) == IDC_TACT_FKSH)
+									gteams[gn_teamsel].fk_taker_short = val;
+								else if (LOWORD(W) == IDC_TACT_FK2)
+									gteams[gn_teamsel].fk_taker_2 = val;
+								else if (LOWORD(W) == IDC_TACT_CKL)
+									gteams[gn_teamsel].ck_taker_left = val;
+								else if (LOWORD(W) == IDC_TACT_CKR)
+									gteams[gn_teamsel].ck_taker_right = val;
+								else if (LOWORD(W) == IDC_TACT_PK)
+									gteams[gn_teamsel].pk_taker = val;
+								else if (LOWORD(W) == IDC_TACT_PTJ1)
+								{
+									gteams[gn_teamsel].players_to_join_attack[0] = val;
+
+									if (val == 0xFF)
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETCURSEL, 11, 0);
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, 11, 0);
+										gteams[gn_teamsel].players_to_join_attack[1] = val;
+										gteams[gn_teamsel].players_to_join_attack[2] = val;
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+									else
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+									}
+								}
+								else if (LOWORD(W) == IDC_TACT_PTJ2)
+								{
+									gteams[gn_teamsel].players_to_join_attack[1] = val;
+
+									if (val == 0xFF)
+									{
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, 11, 0);
+										gteams[gn_teamsel].players_to_join_attack[2] = val;
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+									else
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+									}
+								}
+								else if (LOWORD(W) == IDC_TACT_PTJ3)
+									gteams[gn_teamsel].players_to_join_attack[2] = val;
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AIA1:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].atk_instructions[0].instruction = val;
+								gteams[gn_teamsel].b_changed = true;
+
+								if (giPesVersion == 17)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), val == 0x0C); //Counter Target
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL));
+							}
+						}
+						break;
+
+						case IDC_TACT_AIA1PL:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].atk_instructions[0].player_id = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AIA2:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].atk_instructions[1].instruction = val;
+								gteams[gn_teamsel].b_changed = true;
+
+								if (giPesVersion == 17)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), val == 0x0C); //Counter Target
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL));
+							}
+						}
+						break;
+
+						case IDC_TACT_AIA2PL:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].atk_instructions[1].player_id = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AID1:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].def_instructions[0].instruction = val;
+								gteams[gn_teamsel].b_changed = true;
+
+								if (giPesVersion == 17)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), val == 0x0C); //Counter Target
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL));
+							}
+						}
+						break;
+
+						case IDC_TACT_AID1PL:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].def_instructions[0].player_id = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDC_TACT_AID2:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].def_instructions[1].instruction = val;
+								gteams[gn_teamsel].b_changed = true;
+
+								if (giPesVersion == 17)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), val == 0x0C); //Counter Target
+								else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+									EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), val == 0x08 || val == 0x0E); //Counter Target & Defensive
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL));
+							}
+						}
+						break;
+
+						case IDC_TACT_AID2PL:
+						{
+							if (gb_tactics_enabled && giPesVersion > 16)
+							{
+								int index = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_GETCURSEL, 0, 0);
+								int val = SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_GETITEMDATA, index, 0);
+								gteams[gn_teamsel].presets[gi_preset].def_instructions[1].player_id = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						default:
+							break;
+					}
+				}
+				break;
+
+				case EN_CHANGE:
+				{
+					switch (LOWORD(W))
+					{
+						case IDT_TACT_PLX:
+						{
+							if (gb_tactics_enabled && gi_selected_player_field != -1 && !gb_updating_tactics)
+							{
+								TCHAR buffer[4];
+								GetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer, 4);
+								int x = _wtoi(buffer);
+								if (x > 0x68)
+								{
+									x = 0x68;
+									swprintf_s(buffer, 4, L"%d", x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer);
+								}
+								else if (x < 0x00)
+								{
+									x = 0x00;
+									swprintf_s(buffer, 4, L"%d", x);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buffer);
+								}
+
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
+
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x = x;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, x, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+
+								//Redraw the region because the entire process of moving a player is a graphical mess
+								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_PLY:
+						{
+							if (gb_tactics_enabled && gi_selected_player_field != -1 && !gb_updating_tactics)
+							{
+								TCHAR buffer[4];
+								GetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer, 4);
+								int y = _wtoi(buffer);
+								if (y > 0x30)
+								{
+									y = 0x30;
+									swprintf_s(buffer, 4, L"%d", y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer);
+								}
+								else if (y < 0x00)
+								{
+									y = 0x00;
+									swprintf_s(buffer, 4, L"%d", y);
+									SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buffer);
+								}
+
+								int current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								int current_pos_ind = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETCURSEL, 0, 0);
+								int current_pos = SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_GETITEMDATA, current_pos_ind, 0);
+
+								gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y = y;
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x, y);
+
+								//Redraw the region because the entire process of moving a player is a graphical mess
+								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_SRNG:
+						{
+							if (gb_tactics_enabled && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer, 3);
+								int range = _wtoi(buffer);
+								if (range > 10)
+								{
+									range = 10;
+									swprintf_s(buffer, 3, L"%d", range);
+									SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer);
+								}
+								else if (range < 1)
+								{
+									range = 1;
+									swprintf_s(buffer, 3, L"%d", range);
+									SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].support_range = range;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_DLNE:
+						{
+							if (gb_tactics_enabled && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer, 3);
+								int val = _wtoi(buffer);
+								if (val > 10)
+								{
+									val = 10;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer);
+								}
+								else if (val < 1)
+								{
+									val = 1;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].defensive_line = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						case IDT_TACT_CMPT:
+						{
+							if (gb_tactics_enabled && !gb_updating_tactics)
+							{
+								TCHAR buffer[3];
+								GetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer, 3);
+								int val = _wtoi(buffer);
+								if (val > 10)
+								{
+									val = 10;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer);
+								}
+								else if (val < 1)
+								{
+									val = 1;
+									swprintf_s(buffer, 3, L"%d", val);
+									SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buffer);
+								}
+								gteams[gn_teamsel].presets[gi_preset].compactness = val;
+								gteams[gn_teamsel].b_changed = true;
+							}
+						}
+						break;
+
+						default:
+							break;
+					}
+				}
+				break;
+
+				case BN_CLICKED:
+				{
+					switch (LOWORD(W))
+					{
+						case IDB_TACT_FLUID:
+						{
+							if (gb_tactics_enabled && !gb_updating_tactics)
+							{
+								gb_updating_tactics = true;
+
+								//If fluid is active, switch to the kickoff formation to prevent confusion
+								if (gteams[gn_teamsel].presets[gi_preset].fluid)
+								{
+									SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+									gi_formation = 0;
+									populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+								}
+
+								gteams[gn_teamsel].presets[gi_preset].fluid = !gteams[gn_teamsel].presets[gi_preset].fluid;
+								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
+								gb_updating_tactics = false;
+							}
+						}
+						break;
+
+						case IDB_TACT_PLNXT:
+						case IDB_TACT_PLPRV:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled)
+							{
+								if (gi_selected_player_field == -1)
+								{
+									gi_selected_player_field = 0;
+									if (gi_selected_player_bench != -1)
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+									}
+								}
+								else if (LOWORD(W) == IDB_TACT_PLNXT)
+								{
+									if (gi_selected_player_field == 10)
+										gi_selected_player_field = 0;
+									else
+										gi_selected_player_field++;
+								}
+								else
+								{
+									if (gi_selected_player_field == 0)
+										gi_selected_player_field = 10;
+									else
+										gi_selected_player_field--;
+								}
+
+								int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
+								for (int ii = 0; ii < gnum_players; ii++)
+								{
+									if (gplayers[ii].id == player_id)
+									{
+										SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
+
+										wchar_t buff_x[4], buff_y[3];
+										swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x);
+										swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
+										SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+										SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+										SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos - 1, 0);
+
+										if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos != 0x00)
+										{
+											EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), TRUE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+										}
+										else
+										{
+											EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+											EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+											EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), FALSE);
+											UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+										}
+										break;
+									}
+								}
+
+								gteams[gn_teamsel].b_changed = true;
+							}
+							gb_updating_tactics = false;
+						}
+						break;
+
+						case IDB_TACT_BTNGK:
+						{
+							if (gb_tactics_enabled)
+							{
+								gb_updating_tactics = true;
+								//Find current GK
+								int curr_x, curr_y, curr_pos, current_index;
+								curr_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
+								curr_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+								curr_pos = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos;
+								current_index = gteams[gn_teamsel].starting11[gi_selected_player_field];
+
+								for (int ii = 0; ii < 11; ii++)
+								{
+									int player_index = gteams[gn_teamsel].starting11[ii];
+									if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[ii].pos == 0x00)
+									{
+										gteams[gn_teamsel].starting11[gi_selected_player_field] = gteams[gn_teamsel].starting11[ii];
+										gteams[gn_teamsel].starting11[ii] = current_index;
+										set_player_xy(ii, player_index + teamOffset, curr_pos, curr_x, curr_y);
+										break;
+									}
+								}
+
+								set_player_xy(gi_selected_player_field, current_index + teamOffset, 0x00, 54, 3);
+								SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+								SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"52");
+								SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"3");
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+								EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+
+								gteams[gn_teamsel].b_changed = true;
+								gb_updating_tactics = false;
+							}
+						}
+						break;
+
+						case IDB_TACT_SWPPL:
+						{
+							if (gb_tactics_enabled)
+							{
+								gb_updating_tactics = true;
+
+								//Find current GK
+								int curr_x, curr_y, curr_pos, player_num, bench_num;
+								curr_x = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x;
+								curr_y = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y;
+								curr_pos = gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].pos;
+								player_num = gteams[gn_teamsel].starting11[gi_selected_player_field];
+								bench_num = gteams[gn_teamsel].bench_order[gi_selected_player_bench];
+
+								gteams[gn_teamsel].starting11[gi_selected_player_field] = bench_num;
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench] = player_num;
+								update_backline(teamOffset);
+
+								set_player_xy(gi_selected_player_field, bench_num + teamOffset, curr_pos, curr_x, curr_y);
+								for (int ii = 0; ii < gnum_players; ii++)
+								{
+									if (bench_num + teamOffset == gplayers[ii].id)
+									{
+										SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, gplayers[ii].name);
+										break;
+									}
+								}
+
+								//Update any player assignments pointing to the old fielded player
+								if (gteams[gn_teamsel].fk_taker_long == player_num)
+									gteams[gn_teamsel].fk_taker_long = bench_num;
+								if (gteams[gn_teamsel].fk_taker_short == player_num)
+									gteams[gn_teamsel].fk_taker_short = bench_num;
+								if (gteams[gn_teamsel].fk_taker_2 == player_num)
+									gteams[gn_teamsel].fk_taker_2 = bench_num;
+								if (gteams[gn_teamsel].ck_taker_left == player_num)
+									gteams[gn_teamsel].ck_taker_left = bench_num;
+								if (gteams[gn_teamsel].ck_taker_right == player_num)
+									gteams[gn_teamsel].ck_taker_right = bench_num;
+								if (gteams[gn_teamsel].pk_taker == player_num)
+									gteams[gn_teamsel].pk_taker = bench_num;
+								if (gteams[gn_teamsel].players_to_join_attack[0] == player_num)
+									gteams[gn_teamsel].players_to_join_attack[0] = bench_num;
+								if (gteams[gn_teamsel].players_to_join_attack[1] == player_num)
+									gteams[gn_teamsel].players_to_join_attack[1] = bench_num;
+								if (gteams[gn_teamsel].players_to_join_attack[2] == player_num)
+									gteams[gn_teamsel].players_to_join_attack[2] = bench_num;
+
+								//Also update any advanced instructions pointed to the old fielded player
+								if (giPesVersion > 16)
+								{
+									for (int ii = 0; ii < 3; ii++)
+									{
+										if (gteams[gn_teamsel].presets[ii].atk_instructions[0].player_id == player_num)
+											gteams[gn_teamsel].presets[ii].atk_instructions[0].player_id = bench_num;
+										if (gteams[gn_teamsel].presets[ii].atk_instructions[1].player_id == player_num)
+											gteams[gn_teamsel].presets[ii].atk_instructions[1].player_id = bench_num;
+										if (gteams[gn_teamsel].presets[ii].def_instructions[0].player_id == player_num)
+											gteams[gn_teamsel].presets[ii].def_instructions[0].player_id = bench_num;
+										if (gteams[gn_teamsel].presets[ii].def_instructions[1].player_id == player_num)
+											gteams[gn_teamsel].presets[ii].def_instructions[1].player_id = bench_num;
+									}
+								}
+
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+
+								populate_tactics_tab(teamOffset, gi_preset, gi_formation, true);
+								
+								gi_selected_player_bench = -1;
+								gteams[gn_teamsel].b_changed = true;
+
+								gb_updating_tactics = false;
+							}
+						}
+						break;
+
+						//One of the backup players or their label
+						case IDB_TACT_BN1:
+						case IDB_TACT_BN2:
+						case IDB_TACT_BN3:
+						case IDB_TACT_BN4:
+						case IDB_TACT_BN5:
+						case IDB_TACT_BN6:
+						case IDB_TACT_BN7:
+						case IDB_TACT_BN8:
+						case IDB_TACT_BN9:
+						case IDB_TACT_BN10:
+						case IDB_TACT_BN11:
+						case IDB_TACT_BN12:
+						case IDC_STATIC_BN1:
+						case IDC_STATIC_BN2:
+						case IDC_STATIC_BN3:
+						case IDC_STATIC_BN4:
+						case IDC_STATIC_BN5:
+						case IDC_STATIC_BN6:
+						case IDC_STATIC_BN7:
+						case IDC_STATIC_BN8:
+						case IDC_STATIC_BN9:
+						case IDC_STATIC_BN10:
+						case IDC_STATIC_BN11:
+						case IDC_STATIC_BN12:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled)
+							{
+								int player_index;
+								if (LOWORD(W) - IDC_STATIC_BN1 < 0)
+									player_index = LOWORD(W) - IDB_TACT_BN1;
+								else
+									player_index = LOWORD(W) - IDC_STATIC_BN1;
+
+								if (player_index != gi_selected_player_bench)
+								{
+									if (gi_selected_player_field != -1)
+									{
+										EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), TRUE);
+										UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+									}
+									gi_selected_player_bench = player_index;
+
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), player_index != 0);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), player_index != 11);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+								}
+								else
+								{
+									gi_selected_player_bench = -1;
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), FALSE);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+									EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), FALSE);
+									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+								}
+
+								RECT rectLineup = create_rect(497, 5, 380, 320);
+								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE);
+							}
+							gb_updating_tactics = false;
+						}
+						break;
+
+						case IDB_TACT_BNMVUP:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled && gi_selected_player_bench > 0)
+							{
+								int playerId = gteams[gn_teamsel].bench_order[gi_selected_player_bench - 1];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench - 1] = gteams[gn_teamsel].bench_order[gi_selected_player_bench];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench] = playerId;
+								gi_selected_player_bench--;
+								update_backline(teamOffset);
+
+								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
+
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), gi_selected_player_bench != 11);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+							}
+
+							gb_updating_tactics = false;
+						}
+						break;
+
+						case IDB_TACT_BNMVDN:
+						{
+							gb_updating_tactics = true;
+							if (gb_tactics_enabled && gi_selected_player_bench != -1 && gi_selected_player_bench != 11)
+							{
+								int playerId = gteams[gn_teamsel].bench_order[gi_selected_player_bench + 1];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench + 1] = gteams[gn_teamsel].bench_order[gi_selected_player_bench];
+								gteams[gn_teamsel].bench_order[gi_selected_player_bench] = playerId;
+								gi_selected_player_bench++;
+								update_backline(teamOffset);
+
+								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
+
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), gi_selected_player_bench != 11);
+								UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+							}
+							gb_updating_tactics = false;
+						}
+						break;
+
+						default:
+							break;
+					}
+				}
+				break;
+				default:
+					break;
+			}
+		}
+		break;
+	}
+	return DefSubclassProc(H, M, W, L);
+}
+
+
+void make_pony_phys()
+{
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HELE, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEWI, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_HEDE, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_SHWI, WM_SETTEXT, 0, (LPARAM)_T("-7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_CHSI, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_WASI, WM_SETTEXT, 0, (LPARAM)_T("-7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_THSI, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_CASI, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDT_PHYS_LELE, WM_SETTEXT, 0, (LPARAM)_T("7"));
+	SendDlgItemMessage(ghw_tab2, IDC_PHYS_SKIN, CB_SETCURSEL, (WPARAM)7, 0);
+	SendMessage(ghw_tab2, WM_COMMAND, MAKEWPARAM(IDB_MOTI_RAND,BN_CLICKED), 0);
+	Button_SetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT),BST_CHECKED);
+	SendDlgItemMessage(ghw_tab2, IDC_STRP_TAIL, CB_SETCURSEL, (WPARAM)1, 0);
+}
+
+
+void trim_team()
+{
+	int csel, num_on_team, ii, jj;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+	if(gn_listsel > -1)
+	{
+		gb_forceupdate = true;
+		gn_forceupdate = gn_playind[gn_listsel];
+	}
+
+	for(num_on_team=0;num_on_team< gteams->team_max;num_on_team++)
+	{
+		if(!gteams[csel].players[num_on_team]) break;
+	}
+
+	if(gn_playind != NULL) delete[] gn_playind;
+	gn_playind = new int[num_on_team];
+
+	SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_DELETEALLITEMS, 0, 0);
+	LVITEM lvI;
+	memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+	lvI.mask = LVIF_TEXT;
+	jj=0;
+	for(ii=0;ii<gnum_players;ii++)
+	{
+		if(gplayers[ii].id == gteams[csel].players[jj] && gplayers[ii].b_show)
+		{
+			gn_playind[jj] = ii;
+			lvI.pszText = gplayers[ii].name;
+			lvI.iItem = jj;
+			SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_INSERTITEM, 0, (LPARAM)&lvI);
+
+			jj++;
+		}
+		if(jj==num_on_team) break;
+	}
+	ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);
+	gn_listsel = 0;
+
+	SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, (WPARAM)csel, 0);
+}
+
+
+void team_vis_clear()
+{
+	int iteam, ii, jj;
+
+	Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_FACE),BST_UNCHECKED);
+	Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_HAIR),BST_UNCHECKED);
+	Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_PHYS),BST_UNCHECKED);
+	Button_SetCheck(GetDlgItem(ghw_tab2, IDB_EDIT_STRP),BST_UNCHECKED);
+
+	if((gn_listsel > -1) && gplayers[gn_playind[gn_listsel]].team_ind >= 0)
+	{
+		iteam = gplayers[gn_playind[gn_listsel]].team_ind;
+		for(ii=0;ii< gteams->team_max;ii++)
+		{
+			if( gteams[iteam].players[ii] && gteams[iteam].players[ii]!=gplayers[gn_playind[gn_listsel]].id )
+			{
+				for(jj=0;jj<gnum_players;jj++)
+				{
+					if( gteams[iteam].players[ii]==gplayers[jj].id )
+					{
+						if(gplayers[jj].b_edit_face) 
+						{
+							gplayers[jj].b_edit_face=false;
+							gplayers[jj].b_changed=true;
+						}
+						if(gplayers[jj].b_edit_hair)
+						{
+							gplayers[jj].b_edit_hair=false;
+							gplayers[jj].b_changed=true;
+						}
+						if(gplayers[jj].b_edit_phys)
+						{
+							gplayers[jj].b_edit_phys=false;
+							gplayers[jj].b_changed=true;
+						}
+						if(gplayers[jj].b_edit_strip)
+						{
+							gplayers[jj].b_edit_strip=false;
+							gplayers[jj].b_changed=true;
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+void team_created_set()
+{
+	int iteam, ii, jj;
+
+	Button_SetCheck(GetDlgItem(ghw_main, IDB_PLAY_EDIT),BST_CHECKED);
+
+	if((gn_listsel > -1) && gplayers[gn_playind[gn_listsel]].team_ind >= 0)
+	{
+		iteam = gplayers[gn_playind[gn_listsel]].team_ind;
+		for(ii=0;ii< gteams->team_max;ii++)
+		{
+			if( gteams[iteam].players[ii] && gteams[iteam].players[ii]!=gplayers[gn_playind[gn_listsel]].id )
+			{
+				for(jj=0;jj<gnum_players;jj++)
+				{
+					if( gteams[iteam].players[ii]==gplayers[jj].id )
+					{
+						if(!gplayers[jj].b_edit_player) 
+						{
+							gplayers[jj].b_edit_player=true;
+							gplayers[jj].b_changed=true;
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void team_fpc_on()
+{
+	int iteam, ii, jj;
+	TCHAR fpcBoot[3], fpcGkGlove[3], fpcBootZero[3], fpcGkGloveZero[3];
+	int i_fpcBoot, i_fpcGkGlove;
+	TCHAR buffer[20];
+
+	if(gn_listsel > -1)
+	{
+		//Hide currently selected player
+		enable_fpc_invis_for_displayed_player(ghw_tab2, giPesVersion);
+
+		//Update current player entry
+		player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+		if (!(gplayers[gn_playind[gn_listsel]] == pe_current))
+		{
+			if (wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name))
+				pe_current.b_edit_player = true;
+			gplayers[gn_playind[gn_listsel]] = pe_current;
+		}
+
+		//Loop through team and turn on FPC invis for each
+		if(gplayers[gn_playind[gn_listsel]].team_ind >= 0)
+		{
+			iteam = gplayers[gn_playind[gn_listsel]].team_ind;
+			for(ii=0;ii< gteams->team_max;ii++)
+			{
+				if( gteams[iteam].players[ii] && gteams[iteam].players[ii]!=gplayers[gn_playind[gn_listsel]].id )
+				{
+					for(jj=0;jj<gnum_players;jj++)
+					{
+						if( gteams[iteam].players[ii]==gplayers[jj].id )
+						{
+							enable_fpc_invis_for_player(gplayers[jj], giPesVersion);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void team_fpc_off()
+{
+	int iteam, ii, jj;
+	TCHAR buffer[20];
+	TCHAR fpcBoot[3], fpcGkGlove[3];
+	int i_fpcBoot, i_fpcGkGlove;
+	
+
+	if(gn_listsel > -1)
+	{
+		//Show currently selected player
+		disable_fpc_invis_for_displayed_player(ghw_tab2, giPesVersion);
+
+		//Update current player entry
+		player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+		if (!(gplayers[gn_playind[gn_listsel]] == pe_current))
+		{
+			if (wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name))
+				pe_current.b_edit_player = true;
+			gplayers[gn_playind[gn_listsel]] = pe_current;
+		}
+
+		if(gplayers[gn_playind[gn_listsel]].team_ind >= 0)
+		{
+			iteam = gplayers[gn_playind[gn_listsel]].team_ind;
+			for(ii=0;ii< gteams->team_max;ii++)
+			{
+				if( gteams[iteam].players[ii] && gteams[iteam].players[ii]!=gplayers[gn_playind[gn_listsel]].id )
+				{
+					for(jj=0;jj<gnum_players;jj++)
+					{
+						if( gteams[iteam].players[ii]==gplayers[jj].id )
+						{
+							disable_fpc_invis_for_player(gplayers[jj], giPesVersion);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void fpc_toggle()
+{
+	if(SendDlgItemMessage(ghw_tab2, IDC_STRP_SOCK, CB_GETCURSEL, 0, 0) == 2) //If short socks, assume FPC is set and remove FPC invisibility settings
+	{
+		disable_fpc_invis_for_displayed_player(ghw_tab2, giPesVersion);
+	}
+	else //Otherwise, assume FPC isn't set and turn on FPC invisibility settings
+	{
+		enable_fpc_invis_for_displayed_player(ghw_tab2, giPesVersion);
+	}
+}
+
+void toggle_hid()
+{
+	int value;
+	if (IsWindowVisible(ghw_tab1))
+	{
+		if (IsWindowVisible(GetDlgItem(ghw_tab1, IDT_STAR)))
+			value = SW_HIDE;
+		else
+			value = SW_SHOW;
+	}
+	else if (IsWindowVisible(ghw_tab2))
+	{
+		if (IsWindowVisible(GetDlgItem(ghw_tab2, IDT_MOTI_DRIB)))
+			value = SW_HIDE;
+		else
+			value = SW_SHOW;
+	}
+	else
+		return;
+
+	for(int ii=IDS_STAR; ii<=IDC_PLAY_ATT; ii++)
+		ShowWindow(GetDlgItem(ghw_tab1, ii), value);
+
+	ShowWindow(GetDlgItem(ghw_tab2, IDC_STATIC_T89), value);
+	ShowWindow(GetDlgItem(ghw_tab2, IDT_MOTI_DRIB), value);
+	ShowWindow(GetDlgItem(ghw_tab2, IDC_MOTI_DRIB), value);
+	ShowWindow(GetDlgItem(ghw_tab2, IDT_PLAY_HAND), value);
+	ShowWindow(GetDlgItem(ghw_tab2, IDC_PLAY_HAND), value);
+}
+
+void set_stats()
+{
+	if (!IsWindow(ghw_stat)) //If dialog isn't already open
+	{ 
+		ghw_stat = CreateDialog(ghinst, MAKEINTRESOURCE(IDD_STATS), ghw_main, statDlgProc); //Create the unit converter modeless dialog box
+		ShowWindow(ghw_stat, SW_SHOW); //Display it
+	}
+}
+
+void bump_stats()
+{
+	if (!IsWindow(ghw_bump)) //If dialog isn't already open
+	{ 
+		ghw_bump = CreateDialog(ghinst, MAKEINTRESOURCE(IDD_STAT_BUMP), ghw_main, bumpDlgProc); //Create the unit converter modeless dialog box
+		ShowWindow(ghw_bump, SW_SHOW); //Display it
+	}
+}
+
+void copy_stats()
+{
+	if (!IsWindow(ghw_copy) && gplayers) //If dialog isn't already open
+	{ 
+		ghw_copy = CreateDialog(ghinst, MAKEINTRESOURCE(IDD_STAT_COPY), ghw_main, copyDlgProc); //Create the unit converter modeless dialog box
+		ShowWindow(ghw_copy, SW_SHOW); //Display it
+	}
+}
+
+void set_boot_glove_ids()
+{
+	if (!IsWindow(ghw_boglo) && gplayers) //If dialog isn't already open
+	{
+		ghw_boglo = CreateDialog(ghinst, MAKEINTRESOURCE(IDD_BOGLO_SET), ghw_main, bogloDlgProc); //Create the unit converter modeless dialog box
+		ShowWindow(ghw_boglo, SW_SHOW); //Display it
+	}
+}
+
+void swap_stats()
+{
+	if (!IsWindow(ghw_swap) && gplayers) //If dialog isn't already open
+	{
+		ghw_swap = CreateDialog(ghinst, MAKEINTRESOURCE(IDD_STAT_SWAP), ghw_main, swapDlgProc); //Create the unit converter modeless dialog box
+		ShowWindow(ghw_swap, SW_SHOW); //Display it
+	}
+}
+
+BOOL CALLBACK scale_children(HWND hwnd, LPARAM lParam)
+{
+	SendMessage(hwnd, UM_SCALE, NULL, lParam);
+	return TRUE;
+}
+
+BOOL CALLBACK draw_children(HWND hwnd, LPARAM lParam)
+{
+	InvalidateRect(hwnd,NULL,true);
+	return TRUE;
+}
+
+void setup_control(HWND hw_new, HFONT hfont, SUBCLASSPROC cntl_proc)
+{
+	RECT* chd_rect;
+
+	SendMessage(hw_new, WM_SETFONT, (WPARAM)hfont, MAKELPARAM(FALSE, 0));
+	chd_rect = new RECT;
+	GetWindowRect(hw_new, chd_rect);
+	MapWindowPoints(HWND_DESKTOP, GetParent(hw_new), (LPPOINT)chd_rect, 2);
+	SetWindowSubclass(hw_new, cntl_proc, 0, (DWORD_PTR)chd_rect);
+}
+
+
+void setup_combo(HWND hw_new, HFONT hfont, SUBCLASSPROC cntl_proc)
+{
+	RECT* chd_rect;
+
+	SendMessage(hw_new, WM_SETFONT, (WPARAM)hfont, MAKELPARAM(FALSE, 0));
+	chd_rect = new RECT;
+	SendMessage(hw_new, CB_GETDROPPEDCONTROLRECT, 0, (LPARAM)chd_rect);
+	MapWindowPoints(HWND_DESKTOP, GetParent(hw_new), (LPPOINT)chd_rect, 2);
+	SetWindowSubclass(hw_new, cntl_proc, 0, (DWORD_PTR)chd_rect);
+}
+
+
+void SD_OnHVScroll(HWND hwnd, int bar, UINT code)
+{
+    const int scrollPos = SD_GetScrollPos(hwnd, bar, code);
+
+    if(scrollPos == -1)
+        return;
+
+    SetScrollPos(hwnd, bar, scrollPos, TRUE);
+    SD_ScrollClient(hwnd, bar, scrollPos);
+}
+
+void SD_ScrollClient(HWND hwnd, int bar, int pos)
+{
+    static int s_prevx = 1;
+    static int s_prevy = 1;
+
+    int cx = 0;
+    int cy = 0;
+
+    int& delta = cx;
+    int& prev = s_prevx;
+
+    delta = prev - pos;
+    prev = pos;
+
+	g_prevx = s_prevx;
+
+	if(cx)
+    {
+        ScrollWindow(ghw_main, cx, cy, NULL, NULL);
+		RECT rcClient;
+		GetClientRect(ghw_main, &rcClient);
+		SetWindowPos(hwnd,0,0,rcClient.bottom-18,rcClient.right,18,SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
+    }
+}
+
+int SD_GetScrollPos(HWND hwnd, int bar, UINT code)
+{
+    SCROLLINFO si = {};
+    si.cbSize = sizeof(SCROLLINFO);
+    si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE | SIF_TRACKPOS;
+    GetScrollInfo(hwnd, bar, &si);
+
+    const int minPos = si.nMin;
+    const int maxPos = si.nMax - (si.nPage - 1);
+
+    int result = -1;
+
+    switch(code)
+    {
+    case SB_LINEUP /*SB_LINELEFT*/:
+        result = max(si.nPos - 1, minPos);
+        break;
+
+    case SB_LINEDOWN /*SB_LINERIGHT*/:
+        result = min(si.nPos + 1, maxPos);
+        break;
+
+    case SB_PAGEUP /*SB_PAGELEFT*/:
+        result = max(si.nPos - (int)si.nPage, minPos);
+        break;
+
+    case SB_PAGEDOWN /*SB_PAGERIGHT*/:
+        result = min(si.nPos + (int)si.nPage, maxPos);
+        break;
+
+    case SB_THUMBPOSITION:
+        // do nothing
+        break;
+
+    case SB_THUMBTRACK:
+        result = si.nTrackPos;
+        break;
+
+    case SB_TOP /*SB_LEFT*/:
+        result = minPos;
+        break;
+
+    case SB_BOTTOM /*SB_RIGHT*/:
+        result = maxPos;
+        break;
+
+    case SB_ENDSCROLL:
+        // do nothing
+        break;
+    }
+
+    return result;
+}
+
+
+void common_shortcuts(WPARAM W)
+{
+	//When ctrl+shft+P key is pressed
+	if( W == 0x50 && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) )
+	{
+		make_pony_phys();
+	}
+	//When ctrl+shft+H key is pressed
+	else if( W == 0x48 && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) )
+	{
+		toggle_hid();
+	}
+	//ctrl+I for toggle FPC invis
+	else if( W == 0x49 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		fpc_toggle();
+	}
+	//ctrl+O for Open dialog
+	else if( W == 0x4F && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_EN), 0);
+	}
+	//ctrl+5 for Open 15 dialog
+	else if (W == 0x35 && (GetKeyState(VK_CONTROL) & 0x8000))
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_15_EN), 0);
+	}
+	//ctrl+6 for Open 16 dialog
+	else if( W == 0x36 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_16_EN), 0);
+	}
+	//ctrl+7 for Open 17 dialog
+	else if( W == 0x37 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_17_EN), 0);
+	}
+	//ctrl+8 for Open 18 dialog
+	else if( W == 0x38 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_18_EN), 0);
+	}
+	//ctrl+9 for Open 19 dialog
+	else if( W == 0x39 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_19_EN), 0);
+	}
+	//ctrl+0 for Open 20 dialog
+	else if( W == 0x30 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_20_EN), 0);
+	}
+	//ctrl+1 for Open 21 dialog
+	else if( W == 0x31 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_OPEN_21_EN), 0);
+	}
+	//ctrl+S for Save dialog
+	else if( W == 0x53 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(ID_FILE_SAVE_EN), 0);
+	}
+	//ctrl+F for clear visual flags
+	else if( W == 0x46 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		if(gplayers)
+			team_vis_clear();
+	}
+	//Page Up to scroll up player list
+	else if( W == 0x21 )
+	{
+		if(gplayers)
+			scroll_player_up();
+	}
+	//Page Down arrow to scroll down player list
+	else if( W == 0x22 )
+	{
+		if(gplayers)
+			scroll_player_down();
+	}
+	//ctrl+shift+B for an important message
+	else if( W == 0x42 && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) )
+	{
+		PlaySound(TEXT("lib\\sound.wav"), NULL, SND_FILENAME | SND_ASYNC);
+	}
+	//ctrl+B for bump player stats dialog
+	else if( W == 0x42 && (GetKeyState(VK_CONTROL) & 0x8000) )
+	{
+		SendMessage(ghw_main, WM_COMMAND, LOWORD(IDM_PLAY_BUMP), 0);
+	}
+}
+
+BOOL CALLBACK statDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Set all player stats dialog box
+{
+	switch (Message) 
+	{ 
+		case WM_INITDIALOG: //when box first opens
+		{
+			TCHAR buffer[3];
+
+			SendDlgItemMessage(hwnd, IDC_STAT, UDM_SETRANGE, 0, MAKELPARAM(99, 40));
+
+			GetDlgItemText(ghw_tab1, IDT_ABIL_ATKP, buffer, 3);
+			SetDlgItemText(hwnd, IDT_STAT, buffer);
+
+			//SetFocus(GetDlgItem(hwnd, IDT_STAT));
+
+			SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+		}
+		break; 
+		
+		case WM_COMMAND:	
+			switch(LOWORD(wParam))
+            {
+				case IDC_OK: //If the "OK" button is pressed,
+				{
+					int ii;
+					TCHAR buffer[3];
+
+					GetDlgItemText(hwnd, IDT_STAT, buffer, 3);
+					for(ii=IDT_ABIL_ATKP;ii<gi_lastAbility;ii+=2)
+					{
+						SetDlgItemText(ghw_tab1, ii, buffer);
+					}
+
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+
+				case IDC_CANCEL: //If the "OK" button is pressed,
+				{
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+			}
+		break;
+
+		case WM_CLOSE:
+			DestroyIcon((HICON)GetClassLongPtr(hwnd, GCLP_HICONSM)); //Destroy the allocated icon to free the GDI resource
+			SetClassLongPtr(hwnd, GCLP_HICONSM, NULL); //Set icon pointer to NULL
+			ghw_stat = NULL;
+			DestroyWindow(hwnd);
+		default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
+BOOL CALLBACK bumpDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Bump player stats dialog box
+{
+	switch(Message)
+	{ 
+		case WM_INITDIALOG: //when box first opens
+		{
+			TCHAR buffer[3];
+
+			SendDlgItemMessage(hwnd, IDC_STAT, UDM_SETRANGE, 0, MAKELPARAM(10, -10));
+
+			//GetDlgItemText(ghw_tab1, IDT_ABIL_ATKP, buffer, 3);
+			_itow_s(g_bumpAmount, buffer, 3, 10);
+			SetDlgItemText(hwnd, IDT_STAT, buffer);
+
+			SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+		}
+		break; 
+		
+		case WM_COMMAND:	
+			switch(LOWORD(wParam))
+            {
+				case IDC_OK: //If the "OK" button is pressed,
+				{
+					int ii, change, cur_stat, new_stat;
+					TCHAR buffer[3];
+
+					GetDlgItemText(hwnd, IDT_STAT, buffer, 3);
+					change = _wtoi(buffer);
+					for(ii=IDT_ABIL_ATKP;ii<gi_lastAbility;ii+=2)
+					{
+						GetDlgItemText(ghw_tab1, ii, buffer, 3);
+						cur_stat = _wtoi(buffer);
+						new_stat = cur_stat + change;
+						if(new_stat>99) new_stat = 99;
+						if(new_stat<40) new_stat = 40;
+						_itow_s(new_stat, buffer, 3, 10);
+						SetDlgItemText(ghw_tab1, ii, buffer);
+					}
+					g_bumpAmount = change; 
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+
+				case IDC_CANCEL: //If the "Cancel" button is pressed,
+				{
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+			}
+		break;
+
+		case WM_CLOSE:
+			DestroyIcon((HICON)GetClassLongPtr(hwnd, GCLP_HICONSM)); //Destroy the allocated icon to free the GDI resource
+			SetClassLongPtr(hwnd, GCLP_HICONSM, NULL); //Set icon pointer to NULL
+			ghw_stat = NULL;
+			DestroyWindow(hwnd);
+			SetFocus(GetDlgItem(ghw_main,IDC_NAME_LIST));
+		default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
+BOOL CALLBACK copyDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Copy player from one ID to another
+{
+	switch (Message) 
+	{ 
+		case WM_INITDIALOG: //when box first opens
+		{
+			TCHAR buffer[7];
+
+			GetDlgItemText(ghw_main, IDT_PLAY_ID, buffer, 7);
+			SetDlgItemText(hwnd, IDT_STAT_SOUR, buffer);
+			SetDlgItemText(hwnd, IDT_STAT_DEST, buffer);
+
+			//SetFocus(GetDlgItem(hwnd, IDT_STAT));
+
+			SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+		}
+		break; 
+		
+		case WM_COMMAND:	
+			switch(LOWORD(wParam))
+            {
+				case IDC_OK: //If the "OK" button is pressed,
+				{
+					int srcPID, destPID;
+					int srcIndex=-1, destIndex=-1;
+					player_export srcPlyrExport;
+					wchar_t buffer[21];
+
+					//Update current player entry
+					if(gn_listsel > -1)
+					{
+						player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+						if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+						{
+							if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+								pe_current.b_edit_player = true;
+							gplayers[gn_playind[gn_listsel]] = pe_current;
+						}
+					}
+
+					//Get source and destination PIDs:
+					SendDlgItemMessage(hwnd, IDT_STAT_SOUR, WM_GETTEXT, 18, (LPARAM)buffer);
+					srcPID = _wtoi(buffer);
+					SendDlgItemMessage(hwnd, IDT_STAT_DEST, WM_GETTEXT, 18, (LPARAM)buffer);
+					destPID = _wtoi(buffer);
+
+					//Find the source and destination players by PID
+					for(int ii=0;ii<gnum_players;ii++)
+					{
+						if(srcIndex > -1 && destIndex > -1) break;
+						if(gplayers[ii].id == srcPID)
+						{
+							srcIndex = ii;
+							srcPlyrExport = gplayers[srcIndex].PlayerExport();
+						}
+						if(gplayers[ii].id == destPID)
+						{
+							destIndex = ii;
+						}
+					}
+					if(srcIndex == -1 || destIndex == -1) break;
+
+					//Overwrite stats of dest player (leave Aes alone), set b_changed flag
+					gplayers[destIndex].PlayerImport(srcPlyrExport, true, false);
+					gplayers[destIndex].b_changed = true;
+
+					//Refresh display of currently selected player
+					if(gn_listsel > -1)
+						show_player_info(gn_playind[gn_listsel]);
+
+					//SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+
+				case IDC_CANCEL: //If the "OK" button is pressed,
+				{
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+			}
+		break;
+
+		case WM_CLOSE:
+			DestroyIcon((HICON)GetClassLongPtr(hwnd, GCLP_HICONSM)); //Destroy the allocated icon to free the GDI resource
+			SetClassLongPtr(hwnd, GCLP_HICONSM, NULL); //Set icon pointer to NULL
+			ghw_stat = NULL;
+			DestroyWindow(hwnd);
+		default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL CALLBACK swapDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Swap all player stats dialog box
+{
+	switch (Message)
+	{
+	case WM_INITDIALOG: //when box first opens
+	{
+		TCHAR buffer[7];
+
+		GetDlgItemText(ghw_main, IDT_PLAY_ID, buffer, 7);
+		SetDlgItemText(hwnd, IDT_STAT_FPID, buffer);
+		SetDlgItemText(hwnd, IDT_STAT_SPID, buffer);
+
+		//SetFocus(GetDlgItem(hwnd, IDT_STAT));
+
+		SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+	}
+	break;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDC_OK: //If the "OK" button is pressed,
+		{
+			int srcPID, destPID;
+			int srcIndex = -1, destIndex = -1;
+			player_export srcPlyrExport;
+			player_export destPlyrExport;
+			wchar_t buffer[21];
+
+			//Update current player entry
+			player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+			if (!(gplayers[gn_playind[gn_listsel]] == pe_current))
+			{
+				if (wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name))
+					pe_current.b_edit_player = true;
+				gplayers[gn_playind[gn_listsel]] = pe_current;
+			}
+
+			//Get source and destination PIDs:
+			SendDlgItemMessage(hwnd, IDT_STAT_FPID, WM_GETTEXT, 18, (LPARAM)buffer);
+			srcPID = _wtoi(buffer);
+			SendDlgItemMessage(hwnd, IDT_STAT_SPID, WM_GETTEXT, 18, (LPARAM)buffer);
+			destPID = _wtoi(buffer);
+
+			//Find the source and destination players by PID
+			for (int ii = 0; ii < gnum_players; ii++)
+			{
+				if (srcIndex > -1 && destIndex > -1) break;
+				if (gplayers[ii].id == srcPID)
+				{
+					srcIndex = ii;
+					srcPlyrExport = gplayers[srcIndex].PlayerExport();
+				}
+				if (gplayers[ii].id == destPID)
+				{
+					destIndex = ii;
+					destPlyrExport = gplayers[destIndex].PlayerExport();
+				}
+			}
+			if (srcIndex == -1 || destIndex == -1) break;
+
+			//Overwrite stats of dest player (leave Aes alone), set b_changed flag
+			gplayers[destIndex].PlayerImport(srcPlyrExport, true, false);
+			gplayers[destIndex].b_changed = true;
+
+			gplayers[srcIndex].PlayerImport(destPlyrExport, true, false);
+			gplayers[srcIndex].b_changed = true;
+
+			//Refresh display of currently selected player
+			show_player_info(gn_playind[gn_listsel]);
+
+			//SendMessage(hwnd, WM_CLOSE, 0, 0);
+		}
+		break;
+
+		case IDC_CANCEL: //If the "OK" button is pressed,
+		{
+			SendMessage(hwnd, WM_CLOSE, 0, 0);
+		}
+		break;
+		}
+		break;
+
+	case WM_CLOSE:
+		DestroyIcon((HICON)GetClassLongPtr(hwnd, GCLP_HICONSM)); //Destroy the allocated icon to free the GDI resource
+		SetClassLongPtr(hwnd, GCLP_HICONSM, NULL); //Set icon pointer to NULL
+		ghw_stat = NULL;
+		DestroyWindow(hwnd);
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+BOOL CALLBACK importDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //import player stats dialog box
+{
+	switch(Message)
+	{ 
+		case WM_INITDIALOG: //when box first opens
+		{
+			if(gb_importStats) Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_STAT), BST_CHECKED);
+			else Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_STAT), BST_UNCHECKED);
+
+			if(gb_importAes) Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_AEST), BST_CHECKED);
+			else Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_AEST), BST_UNCHECKED);
+
+			if(gb_importTact) Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_TACT), BST_CHECKED);
+			else Button_SetCheck(GetDlgItem(hwnd, IDB_IMPO_TACT), BST_UNCHECKED);
+
+			//SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+		}
+		break; 
+		
+		case WM_COMMAND:	
+			switch(LOWORD(wParam))
+            {
+				case IDC_OK: //If the "OK" button is pressed,
+				{
+					gb_importStats = IsDlgButtonChecked(hwnd, IDB_IMPO_STAT);
+					gb_importAes = IsDlgButtonChecked(hwnd, IDB_IMPO_AEST);
+					gb_importTact = IsDlgButtonChecked(hwnd, IDB_IMPO_TACT);
+					EndDialog(hwnd, IDC_OK);
+				}
+				break;
+
+				case IDC_CANCEL: //If the "Cancel" button is pressed, FIX THIS to properly seend cancelled message to parent window
+				{
+					EndDialog(hwnd, IDC_CANCEL);
+				}
+				break;
+			}
+		break;
+
+		default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
+void roster_data_output()
+{
+//	char* buffer;
+//	wchar_t short_name[0x4];
+
+	TCHAR** playstyle; //pointer to playstyle lists for 18 (and under), 19, or 20 (and up)
+
+	if(giPesVersion>=20)
+	{
+		playstyle = gpc_playstyle20;
+	}
+	else if(giPesVersion==19)
+	{
+		playstyle = gpc_playstyle19;
+	}
+	else
+	{
+		playstyle = gpc_playstyle18;
+	}
+	TCHAR* playskills[] = {_T("Scissors Feint"),
+	_T("Flip Flap"),
+	_T("Marseille Turn"),
+	_T("Sombrero"),
+	_T("Cut Behind & Turn"),
+	_T("Scotch Move"),
+	_T("Heading"),
+	_T("Long Range Drive"),
+	_T("Knuckle Shot"),
+	_T("Acro Finishing"),
+	_T("Heel Trick"),
+	_T("First Time Shot"),
+	_T("One Touch Pass"),
+	_T("Weighted Pass"),
+	_T("Pinpoint Crossing"),
+	_T("Outside Curler"),
+	_T("Rabona"),
+	_T("Low Lofted Pass"),
+	_T("Low Punt Trajectory"),
+	_T("Long Throw"),
+	_T("GK Long Throw"),
+	_T("Malicia"),
+	_T("Man Marking"),
+	_T("Track Back"),
+	_T("Acro Clear"),
+	_T("Captaincy"),
+	_T("Super Sub"),
+	_T("Fighting Spirit"),
+	_T("Double Touch"),
+	_T("Crossover Turn"),
+	_T("Step on Skill"),
+	_T("Chip Shot"),
+	_T("Dipping Shots"),
+	_T("Rising Shots"),
+	_T("No Look Pass"),
+	_T("GK High Punt Trajectory"),
+	_T("Penalty Specialist"),
+	_T("GK Penalty Specialist"),
+	_T("Interception"),
+	_T("Long Range Shooting"),
+	_T("Through Passing")};
+
+	TCHAR* comstyles[] = {_T("Trickster"),
+	_T("Mazing Runner"),
+	_T("Speeding Bullet"),
+	_T("Incisive Run"),
+	_T("Long Ball Expert"),
+	_T("Early Cross"),
+	_T("Long Ranger")};
+
+	FILE *outStream = _tfopen(_T("EDIT.tsv"), _T("w, ccs=UTF-8")); //ccs=UNICODE
+
+	if(!outStream)
+	{
+		//buffer = strerror(errno);
+		return;
+	}
+	
+	for(int iteam=0;iteam<gnum_teams;iteam++)
+	{
+		_ftprintf(outStream, _T("%s\n"), gteams[iteam].name);
+//for Ved:		mbstowcs(short_name,gteams[iteam].short_name,4); 
+		for(int ii=0;ii< gteams->team_max;ii++)
+		{
+			if( gteams[iteam].players[ii] )
+			{
+				for(int jj=0;jj<gnum_players;jj++)
+				{
+					if( gteams[iteam].players[ii]==gplayers[jj].id )
+					{
+						TCHAR buffer[6];
+						std::wstring outstr = L"";
+						//memset(outstr,0,sizeof(outstr));
+						/*
+						//Label medal players
+						if(gplayers[jj].finish == 99) _tcscpy(buffer,_T("GOLD "));
+						else if(gplayers[jj].finish > 85) _tcscpy(buffer,_T("SILVER "));
+						else _tcscpy(buffer,_T(""));
+						//Label team captain
+						if(gteams[iteam].captain_ind == ii) _tcscat(buffer, _T("(C)"));
+						*/
+						//Print Ability score
+						_itot_s(gplayers[jj].finish, buffer, 6, 10);
+						outstr += buffer;
+						outstr += _T("\t");
+
+						//Label captain
+						if(gteams[iteam].captain_ind == ii) outstr += L"(C)\t";
+						else outstr += L"\t";
+
+						//Print height
+						_itot_s(gplayers[jj].height, buffer, 6, 10);
+						outstr += buffer;
+						outstr += _T("\t");
+
+						//Print play style
+						int ind = gplayers[jj].play_style;
+						if((giPesVersion == 15 || giPesVersion==16) && ind>16) ind--;
+						outstr += playstyle[ind];
+
+						//Print player skill(s)
+						int numSkill;
+						if(giPesVersion==19) numSkill=39;
+						else if(giPesVersion>=20) numSkill=41;
+						else numSkill=28;
+						for(int kk=0;kk<numSkill;kk++)
+						{
+							if(gplayers[jj].play_skill[kk])
+							{
+								outstr += _T("\t");
+								outstr += playskills[kk];
+							}
+						}
+						//Print COM style(s)
+						for(int kk=0;kk<7;kk++)
+						{
+							if(gplayers[jj].com_style[kk])
+							{
+								outstr += _T("\t");
+								outstr += comstyles[kk];
+							}
+						}
+
+						_ftprintf(outStream, _T("%d\t%s\t%s\t%s\n"), gteams[iteam].numbers[ii], gplayers[jj].name,
+							gpc_pos_short[gplayers[jj].reg_pos], outstr.c_str());
+//for Ved:					_ftprintf(outStream, _T("%s,%s,%s%d\n"), poss[gplayers[jj].reg_pos], gplayers[jj].name,
+//									short_name,ii+1);
+						break;
+					}
+				}
+			}
+		}
+		_fputts(_T("\n"),outStream);
+	}
+	fclose(outStream);
+}
+
+
+void fix_database()
+{
+	int ii;
+
+	for(ii=0;ii<gnum_players;ii++)
+	{
+		if(!gplayers[ii].b_base_copy && gplayers[ii].copy_id != gplayers[ii].id && gplayers[ii].copy_id != 0)
+		{
+			gplayers[ii].copy_id = 0;
+			gplayers[ii].b_changed=true;
+		}
+		else if(gplayers[ii].b_base_copy && 
+			    (gplayers[ii].copy_id == gplayers[ii].id || gplayers[ii].copy_id == 0)) //If it's not a base copy of another player but the base copy flag is set, unset it
+		{
+			//gplayers[ii].copy_id = gplayers[ii].id;
+			gplayers[ii].b_base_copy=false;
+			gplayers[ii].b_changed=true;
+		}
+
+		if(gplayers[ii].b_edit_face) 
+		{
+			gplayers[ii].b_edit_face=false;
+			gplayers[ii].b_changed=true;
+		}
+
+		if(gplayers[ii].b_edit_hair)
+		{
+			gplayers[ii].b_edit_hair=false;
+			gplayers[ii].b_changed=true;
+		}
+
+		if(gplayers[ii].b_edit_phys)
+		{
+			gplayers[ii].b_edit_phys=false;
+			gplayers[ii].b_changed=true;
+		}
+
+		if(gplayers[ii].b_edit_strip)
+		{
+			gplayers[ii].b_edit_strip=false;
+			gplayers[ii].b_changed=true;
+		}
+	}
+	if(gn_listsel > -1)
+		show_player_info(gn_playind[gn_listsel]);
+
+	//Clear the Team Strip Edited flag and reset strip values
+	for (ii=0; ii < gnum_teams; ii++)
+	{
+		//Set Edited Strip flag to false
+		if (gteams[ii].b_edit_strip)
+		{
+			gteams[ii].b_edit_strip = false;
+			gteams[ii].b_changed = true;
+		}
+		//Return strip settings to default configuration:
+		//Set first 3 strip entries to Kit 1 (0), Kit 2 (1), and GK kit (0x80), and IDs to Team Id * 0x40
+		//Set all subsequent strip entries to a non-existent team ID (0xFFFFC0)
+		if (gteams[ii].stripBlock[0].stripNumber != 0x0 || 
+			gteams[ii].stripBlock[0].stripTeamId != gteams[ii].id * 0x40)
+		{
+			gteams[ii].stripBlock[0].stripNumber = 0x0;
+			gteams[ii].stripBlock[0].stripTeamId = gteams[ii].id * 0x40;
+			gteams[ii].b_changed = true;
+		}
+		if (gteams[ii].stripBlock[1].stripNumber != 0x1 ||
+			gteams[ii].stripBlock[1].stripTeamId != gteams[ii].id * 0x40)
+		{
+			gteams[ii].stripBlock[1].stripNumber = 0x1;
+			gteams[ii].stripBlock[1].stripTeamId = gteams[ii].id * 0x40;
+			gteams[ii].b_changed = true;
+		}
+		if (gteams[ii].stripBlock[2].stripNumber != 0x80 ||
+			gteams[ii].stripBlock[2].stripTeamId != gteams[ii].id * 0x40)
+		{
+			gteams[ii].stripBlock[2].stripNumber = 0x80; //GK strip
+			gteams[ii].stripBlock[2].stripTeamId = gteams[ii].id * 0x40;
+			gteams[ii].b_changed = true;
+		}
+		for (int jj = 3; jj < 10; jj++)
+		{
+			if (gteams[ii].stripBlock[jj].stripNumber != 0x0 ||
+				gteams[ii].stripBlock[jj].stripTeamId != 0xFFFFC0)
+			{
+				gteams[ii].stripBlock[jj].stripNumber = 0x0;
+				gteams[ii].stripBlock[jj].stripTeamId = 0xFFFFC0; //Non-existent team ID
+				gteams[ii].b_changed = true;
+			}
+		}
+	}
+	if (giPesVersion == 17)
+	{	//Fix kit team IDs in Unknown section so kit preview colors 12 and 2 display properly
+		int current_byte = 0x425180;
+		FileDescriptorOld* pDescriptorOld = (FileDescriptorOld*)ghdescriptor;
+		for (int ii = 0; ii < 2500; ii++) //2500 entries
+		{
+			write_dataOld(0xFFFFC0, 0, 4 * 8, current_byte, pDescriptorOld);
+			current_byte += 0x80;
+		}
+	}
+}
+
+
+void scroll_player_up()
+{
+	if( gn_listsel != 0 )
+	{
+		ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel-1, false);
+		ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel-1, LVIS_SELECTED, LVIS_SELECTED);
+	}	
+}
+
+void scroll_player_down()
+{
+	if( gn_listsel != ListView_GetItemCount(GetDlgItem(ghw_main, IDC_NAME_LIST))-1 )
+	{
+		ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel+1, false);
+		ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), gn_listsel+1, LVIS_SELECTED, LVIS_SELECTED);
+	}	
+}
+
+void player_names_to_positions()
+{
+	int num_on_team, csel, current_listsel;
+	TCHAR buffer[61];
+	LVITEM lvI;
+
+	if (gn_listsel < 0)
+		return;
+
+	//Save current listbox selection index to restore at end
+	current_listsel = gn_listsel;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+
+	//Update current player entry
+	player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+	if (!(gplayers[gn_playind[gn_listsel]] == pe_current))
+	{
+		gplayers[gn_playind[gn_listsel]] = pe_current;
+	}
+
+	//Loop over each entry in the player listview
+	//Access the entry in the gplayer array for each player listed in the listview
+	int maxNames = SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_GETITEMCOUNT, 0, 0);
+	for (int ii = 0; ii < maxNames; ii++)
+	{
+		//Update gn_listsel to each item in the list to avoid triggering the (iItem != gn_listsel) condition in LVN_ITEMCHANGED
+		//Will change back to actual selection at end
+		gn_listsel = ii;
+		//Update the name to the registered position
+		wcsncpy_s(gplayers[gn_playind[ii]].name, gpc_positions[gplayers[gn_playind[ii]].reg_pos], 61); //Could also use gpc_pos_short
+		gplayers[gn_playind[ii]].b_edit_player = true;
+		//if (!wcscmp(gplayers[ii].name, buffer))
+
+		//Update displayed name in name in the listview
+		memset(&lvI, 0, sizeof(lvI)); //Zero out struct members
+		lvI.mask = LVIF_TEXT;
+		lvI.pszText = gplayers[gn_playind[ii]].name;
+		lvI.iItem = ii;
+		SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+	}
+
+	//Then refresh the displayed data for the selected player
+	gn_listsel = current_listsel;
+	TCHAR* tmp = gplayers[gn_playind[gn_listsel]].name;
+	show_player_info(gn_playind[gn_listsel]);
+}
+
+void export_squad(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, jj, kk, num_on_team, csel;
+
+	if(gn_listsel < 0) 
+		return;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+
+	//First update the data structure to reflect any changes the user has made to the current player/team
+	player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+	if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+	{
+		if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+			pe_current.b_edit_player = true;
+		gplayers[gn_playind[gn_listsel]] = pe_current;
+
+		//Update displayed name
+		LVITEM lvI;
+		memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+		lvI.mask = LVIF_TEXT;
+		lvI.pszText = pe_current.name;
+		lvI.iItem = gn_listsel;
+		SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+
+		show_player_info(gn_playind[gn_listsel]);
+	}
+
+	//Check and update team tables
+	team_entry te_current;
+	if( get_form_team_info(gn_playind[gn_listsel], te_current) )
+	{
+		int ti = gplayers[gn_playind[gn_listsel]].team_ind;
+		if( !(gteams[ti] == te_current) )
+		{
+			gteams[ti] = te_current;
+
+			//Update combobox
+			//int csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_DELETESTRING, gn_teamArrayIndToCb[ti]+1, 0);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_INSERTSTRING, gn_teamArrayIndToCb[ti]+1, (LPARAM)te_current.name);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, csel+1, 0);
+		}
+	}
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR outPath[MAX_PATH] = _T("");
+	char defName[10];
+	strcpy(defName, gteams[gn_teamCbIndToArray[csel]].short_name);
+	strcat(defName, ".4ccs");
+	_tcscpy(outPath, A2T(defName));
+
+	ii=0;
+	const char *invalid_characters = "<>:\"/\\|?*";
+	while((int)defName[ii]>0 && ii<10)
+	{
+		if((int)(defName[ii])<32 || strchr(invalid_characters, defName[ii]))
+		{
+			_tcscpy(outPath, _T("export.4ccs"));
+			break;
+		}
+		ii++;
+	}
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)outPath;
+	//ofn.lpstrFileTitle = (LPTSTR)outPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Save squad settings");
+
+	if(GetSaveFileName(&ofn))
+	{
+		//strcpy(outPath, T2A(tOutPath));
+		//Open file stream
+		std::ofstream output_file(outPath, std::ios::binary);
+
+		//Write out 4CCS version number to allow compatibility checks
+		output_file.write(gc_ver4ccs, 3);
+
+		//Write out PES version we're exporting from
+		char cPesVersion[3];
+		_itoa_s(giPesVersion, cPesVersion, 3, 10);
+		output_file.write(cPesVersion, 2);
+
+		//Find number of players on this team
+		for(num_on_team=0;num_on_team< gteams->team_max;num_on_team++)
+		{
+			if(!gteams[gn_teamCbIndToArray[csel]].players[num_on_team]) break;
+		}
+		//Find the entry in the gplayer array matching each player ID on this team
+		kk=0;
+		for(ii=0;ii<gnum_players;ii++)
+		{
+			for(jj=0;jj<num_on_team;jj++)
+			{
+				if(gplayers[ii].id == gteams[gn_teamCbIndToArray[csel]].players[jj])
+				{
+					player_export pOut = gplayers[ii].PlayerExport();
+					if (giPesVersion <= 16) pOut.phys_cont = pOut.body_ctrl;
+					if (giPesVersion <= 15)
+					{
+						pOut.clearing = pOut.body_ctrl;
+						pOut.reflex = pOut.body_ctrl;
+						pOut.cover = pOut.body_ctrl;
+					}
+					output_file.write((char*)&pOut, sizeof(pOut));
+					kk++;
+					break;
+				}
+			}
+			//Stop when every player has been exported
+			if(kk==num_on_team) break;
+		}
+
+		//Write out team shirt numbers
+		output_file.write((char*)gteams[gn_teamCbIndToArray[csel]].numbers, sizeof(gteams[gn_teamCbIndToArray[csel]].numbers));
+
+		if (gb_tactics_enabled)
+		{
+			save_tactical_data(output_file, gn_teamCbIndToArray[csel]);
+		}
+
+		//Close filestream
+		output_file.close();
+	}
+}
+
+void import_squad(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, jj, kk, num_on_team, csel;
+
+	if(gn_listsel < 0) 
+		return;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR inPath[MAX_PATH] = _T("");
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)inPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Load squad settings");
+
+	if(GetOpenFileName(&ofn))
+	{
+		std::ifstream input_file;
+
+		//Initial, fixed size version check: this doesn't actually work in general use because team sizes can vary (!= 23 players)
+		//input_file.open(inPath, std::ifstream::ate | std::ios::binary);
+		////int byte_pos = 
+		//if( (int)(input_file.tellg()) < 7268)
+		//{
+		//	MessageBox(ghw_main, _T("Invalid 4CCS file!\r\nPlease save a 4CCS for this team using a PES19-compatible version of 4ccEditor."),
+		//		_T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+		//	input_file.close();
+		//	return;
+		//}
+		//input_file.close();
+
+		//Open file stream for reading
+		//std::ifstream input_file(inPath, std::ios::binary);
+		input_file.open(inPath, std::ios::binary);
+
+		//Check for squad export version compatibility
+		char c_ver[4];
+		input_file.read(c_ver, 3);
+		c_ver[3] = '\0';
+		if(strcmp(c_ver, gc_ver4ccs)!=0)
+		{
+			TCHAR message[200];
+			_stprintf(message, _T("Invalid 4CCS file!\r\nPlease save a 4CCS for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4ccs));
+			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+			input_file.close();
+			return;
+		}
+
+		if(DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DATA_IMPORT), ghw_main, importDlgProc) == IDC_OK) //If OK is clicked
+		{
+			//Get version this was imported from
+			char c_pesVer[3];
+			int pesVer;
+			input_file.read(c_pesVer, 2);
+			c_pesVer[2] = '\0';
+			pesVer = atoi(c_pesVer);
+
+			//Find number of players on this team
+			for(num_on_team=0; num_on_team < gteams->team_max; num_on_team++)
+			{
+				if(!gteams[gn_teamCbIndToArray[csel]].players[num_on_team]) break;
+			}
+			//Find the entry in the gplayer array matching each player ID on this team
+			kk=0;
+			for(ii=0;ii<gnum_players;ii++)
+			{
+				for(jj=0;jj<num_on_team;jj++)
+				{
+					if(gplayers[ii].id == gteams[gn_teamCbIndToArray[csel]].players[jj])
+					{
+						player_export pIn;
+						input_file.read((char *)&pIn, sizeof(pIn));
+						gplayers[ii].PlayerImport(pIn, gb_importStats, gb_importAes);
+						//No Custom skin in 18
+						if(gb_importAes && giPesVersion>=18 && gplayers[ii].skin_col==7) gplayers[ii].skin_col=0;
+						//Convert between 19+ and 18- play style nunmbers if needed
+						if(gb_importStats)
+						{
+							//Convert playstyle numbers between PES versions
+							if (pesVer <= 16 && (giPesVersion == 17 || giPesVersion == 18)) gplayers[ii].play_style = n_playstyle16to1718[gplayers[ii].play_style];
+							else if (pesVer <= 16 && giPesVersion == 19) gplayers[ii].play_style = n_playstyle16to19[gplayers[ii].play_style];
+							else if (pesVer <= 16 && giPesVersion >= 20) gplayers[ii].play_style = n_playstyle16to2021[gplayers[ii].play_style];
+							else if ((pesVer == 17 || pesVer == 18) && giPesVersion <= 16) gplayers[ii].play_style = n_playstyle1718to16[gplayers[ii].play_style];
+							else if ((pesVer == 17 || pesVer == 18) && giPesVersion == 19) gplayers[ii].play_style = n_playstyle1718to19[gplayers[ii].play_style];
+							else if ((pesVer == 17 || pesVer == 18) && giPesVersion >= 20) gplayers[ii].play_style = n_playstyle1718to2021[gplayers[ii].play_style];
+							else if (pesVer == 19 && giPesVersion <= 16) gplayers[ii].play_style = n_playstyle19to16[gplayers[ii].play_style];
+							else if (pesVer == 19 && (giPesVersion == 17 || giPesVersion == 18)) gplayers[ii].play_style = n_playstyle19to1718[gplayers[ii].play_style];
+							else if (pesVer == 19 && giPesVersion >= 20) gplayers[ii].play_style = n_playstyle19to2021[gplayers[ii].play_style];
+							else if (pesVer >= 20 && giPesVersion <= 16) gplayers[ii].play_style = n_playstyle2021to16[gplayers[ii].play_style];
+							else if (pesVer >= 20 && (giPesVersion == 17 || giPesVersion == 18)) gplayers[ii].play_style = n_playstyle2021to1718[gplayers[ii].play_style];
+							else if (pesVer >= 20 && giPesVersion == 19) gplayers[ii].play_style = n_playstyle2021to19[gplayers[ii].play_style];
+						}
+						kk++;
+						break;
+					}
+				}
+				//Stop when every player has been imported
+				if(kk==num_on_team) break;
+			}
+
+			//Read in team shirt numbers
+			if(gb_importAes)
+			{
+				input_file.read((char*)gteams[gn_teamCbIndToArray[csel]].numbers, sizeof(gteams[gn_teamCbIndToArray[csel]].numbers));
+				//Limit shirt numbers to single byte for versions earlier than 19
+				if(giPesVersion < 19)
+				{
+					for(ii=0; ii<gteams[0].team_max; ii++)
+					{
+						if(gteams[gn_teamCbIndToArray[csel]].numbers[ii] > 231)
+							gteams[gn_teamCbIndToArray[csel]].numbers[ii] = 231;
+					}
+				}
+			}
+
+			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21))
+			{
+				int pos = num_on_team * sizeof(player_export) + (2 * gteams[0].team_max) + 5;
+				input_file.seekg(pos);
+				//Set the positions, in case the first two options were unchecked
+				for (int teamIndex = 0; teamIndex < gnum_teams; teamIndex++)
+				{
+					int teamId = gteams[gn_teamCbIndToArray[csel]].id;
+					if (gteams[teamIndex].id == teamId)
+					{
+						load_tactical_data(input_file, teamIndex, pesVer);
+						gteams[teamIndex].b_changed = true;
+						break;
+					}
+				}
+
+				init_tactics_tab();
+			}
+
+			int num_lv_entries = ListView_GetItemCount(GetDlgItem(ghw_main, IDC_NAME_LIST));
+			for(ii=0;ii<num_lv_entries;ii++)
+			{
+				ListView_SetItemText(GetDlgItem(ghw_main, IDC_NAME_LIST), ii, 0, gplayers[gn_playind[ii]].name)
+					show_player_info(gn_playind[gn_listsel]);
+			}
+			ListView_EnsureVisible(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, false);
+			ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);
+			//Fix this: update view to show info on first item in list, as it's been selected
+		}
+
+		//Close filestream
+		input_file.close();
+	}
+}
+
+void export_nightly(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, csel, teamIndex;
+
+	if (gb_tactics_enabled != TRUE)
+		return;
+
+	csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0) - 1;
+	teamIndex = gn_teamCbIndToArray[csel];
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR outPath[MAX_PATH] = _T("");
+	char defName[20];
+	strcpy(defName, gteams[teamIndex].short_name);
+	strcat(defName, " tactics.4cct");
+	_tcscpy(outPath, A2T(defName));
+
+	ii=0;
+	const char* invalid_characters = "<>:\"/\\|?*";
+	while ((int)defName[ii]>0 && ii<10)
+	{
+		if ((int)(defName[ii])<32 || strchr(invalid_characters, defName[ii]))
+		{
+			_tcscpy(outPath, _T("tactics.4cct"));
+			break;
+		}
+		ii++;
+	}
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)outPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Save tactics");
+
+	if (GetSaveFileName(&ofn))
+	{
+
+		//strcpy(outPath, T2A(tOutPath));
+		//Open file stream
+		std::ofstream output_file(outPath, std::ios::binary);
+
+		//Write out 4CCS version number to allow compatibility checks
+		output_file.write(gc_ver4cct, 3);
+
+		//Write out PES version we're exporting from
+		char cPesVersion[3];
+		_itoa_s(giPesVersion, cPesVersion, 3, 10);
+		output_file.write(cPesVersion, 2);
+
+		//Write out the team ID
+		char cTeamId[8];
+		_ltoa_s(gteams[teamIndex].id, cTeamId, 8, 10);
+		output_file.write(cTeamId, 8);
+
+		save_tactical_data(output_file, teamIndex);
+
+		//Close filestream
+		output_file.close();
+	}
+}
+
+void import_nightly(HWND hwnd)
+{
+	USES_CONVERSION; //required for A2W, W2A, A2T, T2A macros
+	int ii, jj, kk;
+
+	if (!(giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18))
+		return;
+
+	//Dialog to get out_file path
+	OPENFILENAME ofn;
+	TCHAR inPath[MAX_PATH] = _T("");
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = (LPTSTR)inPath;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrTitle = _T("Import tactics");
+
+	if (GetOpenFileName(&ofn))
+	{
+		std::ifstream input_file;
+
+		input_file.open(inPath, std::ios::binary);
+
+		//Check for  version compatibility
+		char cFileVersion[4];
+		input_file.read(cFileVersion, 3);
+		cFileVersion[3] = '\0';
+		if (strcmp(cFileVersion, gc_ver4cct) != 0)
+		{
+			TCHAR message[200];
+			_stprintf(message, _T("Invalid 4CCT file!\r\nPlease save a 4CCT for this team using a %s-compatible version of 4ccEditor."), A2T(gc_ver4cct));
+			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+			input_file.close();
+			return;
+		}
+		//Get version this was imported from
+		char c_pesVer[3];
+		int pesVer;
+		input_file.read(c_pesVer, 2);
+		c_pesVer[2] = '\0';
+		pesVer = atoi(c_pesVer);
+		if (pesVer != giPesVersion)
+		{
+			TCHAR message[200];
+			_stprintf(message, _T("This tactics file is from a different version of PES than the currently loaded EDIT file!\r\nPES Version: %"), c_pesVer);
+			MessageBox(ghw_main, message, _T("Version Error!"), MB_ICONERROR | MB_OK); //wrong file version
+			input_file.close();
+			return;
+		}
+
+		//Read the team ID
+		char c_teamId[9];
+		input_file.read(c_teamId, 8);
+		c_teamId[8] = '\0';
+		//Disabled, this would enforce only loading tactics for the team who made the export
+		//int teamId = atoi(c_teamId); 
+		load_tactical_data(input_file, gn_teamsel, pesVer);
+		gteams[gn_teamsel].b_changed = true;
+
+		//Close filestream
+		input_file.close();
+
+		init_tactics_tab();
+	}
+}
+
+void save_tactical_data(std::ofstream& output_file, int teamIndex)
+{
+	char c_output;
+	//Write each preset and formation
+	for (int ii = 0; ii < 3; ii++)
+	{
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				output_file.write((char*) &gteams[teamIndex].presets[ii].formations[jj].players[kk].pos, 1);
+			}
+
+			for (int kk = 0; kk < 11; kk++)
+			{
+				//Y/X rather than X/Y strangely
+				output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].y, 1);
+				output_file.write((char*)&gteams[teamIndex].presets[ii].formations[jj].players[kk].x, 1);
+			}
+		}
+
+		output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_style, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].buildup, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].attacking_zone, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].positioning, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_style, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].containment_area, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].pressure, 1);
+
+		byte instruction;
+		for (int jj = 0; jj < 2; jj++)
+		{
+			instruction = translate_adv_instruction(gteams[teamIndex].presets[ii].atk_instructions[jj].instruction);
+			output_file.write((char*)&instruction, 1);
+			output_file.write((char*)&gteams[teamIndex].presets[ii].atk_instructions[jj].player_id, 1);
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			instruction = translate_adv_instruction(gteams[teamIndex].presets[ii].def_instructions[jj].instruction);
+			output_file.write((char*)&instruction, 1);
+			output_file.write((char*)&gteams[teamIndex].presets[ii].def_instructions[jj].player_id, 1);
+		}
+		output_file.write((char*)&gteams[teamIndex].presets[ii].support_range, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_attack, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].defensive_line, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].compactness, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].numbers_in_defense, 1);
+		output_file.write((char*)&gteams[teamIndex].presets[ii].fluid, 1);
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].starting11[ii], 1);
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].bench_order[ii], 1);
+	}
+	output_file.write((char*)&gteams[teamIndex].fk_taker_long, 1);
+	output_file.write((char*)&gteams[teamIndex].fk_taker_short, 1);
+	output_file.write((char*)&gteams[teamIndex].fk_taker_2, 1);
+	output_file.write((char*)&gteams[teamIndex].ck_taker_left, 1);
+	output_file.write((char*)&gteams[teamIndex].ck_taker_right, 1);
+	output_file.write((char*)&gteams[teamIndex].pk_taker, 1);
+	for (int ii = 0; ii < 3; ii++)
+	{
+		output_file.write((char*)&gteams[teamIndex].players_to_join_attack[ii], 1);
+	}
+	output_file.write((char*)&gteams[teamIndex].auto_substitution, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_offside_trap, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_preset_change, 1);
+	output_file.write((char*)&gteams[teamIndex].auto_change_atk_def_levels, 1);
+}
+
+void load_tactical_data(std::ifstream& input_file, int teamIndex, int pesVersion)
+{
+	//Figure out the conversion factor for the X/Y coords since they can vary between versions
+	double x_conversion = 1.0, y_conversion = 1.0;
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+	{
+		if (pesVersion == 16 || pesVersion == 17 || pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21)
+		{
+			//Do nothing, its 1-to-1
+		}
+	}
+
+	char c_input[2];
+	for (int ii = 0; ii < 3; ii++)
+	{
+		for (int jj = 0; jj < 3; jj++)
+		{
+			for (int kk = 0; kk < 11; kk++)
+			{
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].pos = (byte)c_input[0];
+			}
+
+			for (int kk = 0; kk < 11; kk++)
+			{
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].y = (byte)round(((double)c_input[0] * y_conversion));
+				input_file.read(c_input, 1);
+				gteams[teamIndex].presets[ii].formations[jj].players[kk].x = (byte)round(((double)c_input[0] * x_conversion));
+			}
+		}
+
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].attacking_style = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].buildup = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].attacking_zone = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].positioning = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].defensive_style = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].containment_area = (bool)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].pressure = (bool)c_input[0];
+
+		for (int jj = 0; jj < 2; jj++)
+		{
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].atk_instructions[jj].instruction = get_translated_adv_instruction((byte)c_input[0]);
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].atk_instructions[jj].player_id = (byte)c_input[0];
+		}
+		for (int jj = 0; jj < 2; jj++)
+		{
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].def_instructions[jj].instruction = get_translated_adv_instruction((byte)c_input[0]);
+			input_file.read(c_input, 1);
+			gteams[teamIndex].presets[ii].def_instructions[jj].player_id = (byte)c_input[0];
+		}
+
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].support_range = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].numbers_in_attack = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].defensive_line = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].compactness = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].numbers_in_defense = (byte)c_input[0];
+		input_file.read(c_input, 1);
+		gteams[teamIndex].presets[ii].fluid = (bool)c_input[0];
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].starting11[ii] = (int)c_input[0];
+	}
+	for (int ii = 0; ii < 21; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].bench_order[ii] = (int)c_input[0];
+	}
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_long = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_short = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].fk_taker_2 = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].ck_taker_left = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].ck_taker_right = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].pk_taker = (byte)c_input[0];
+	for (int ii = 0; ii < 3; ii++)
+	{
+		input_file.read(c_input, 1);
+		gteams[teamIndex].players_to_join_attack[ii] = (byte)c_input[0];
+	}
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_substitution = (byte)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_offside_trap = (bool)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_preset_change = (bool)c_input[0];
+	input_file.read(c_input, 1);
+	gteams[teamIndex].auto_change_atk_def_levels = (bool)c_input[0];
+}
+
+//Based on 17's advanced instructions, ones added in future versions are added at the end of the list
+//0x00 - OFF
+//0x01 - Hug the Touchline
+//0x02 - False No. 9
+//0x03 - False Full Backs
+//0x04 - Attacking Full Backs
+//0x05 - Wing Rotation
+//0x06 - Tiki-Taka
+//0x07 - Centering Targets
+//0x08 - Swarm the Box
+//0x09 - Deep Defensive Line
+//0x0A - Gegenpress
+//0x0B - Tight Marking
+//0x0C - Counter Target
+//0x0D - Defensive
+//0x0E - False Winger
+//0x0F - Wing Back
+byte translate_adv_instruction(byte instruction, int pesVersion)
+{
+	if (pesVersion == -1)
+		pesVersion = giPesVersion;
+
+	switch (instruction)
+	{
+		case 0x01:
+		{
+			return 0x01; //Hug The Touchline, same across all versions
+		}
+		break;
+
+		case 0x02:
+		{
+			return 0x02; //False #9, same across all versions
+		}
+		break;
+
+		case 0x03:
+		{
+			return 0x03; //False Full Backs, same across all versions
+		}
+		break;
+
+		case 0x04:
+		{
+			return 0x04; //Attacking Full Backs, same across all versions
+		}
+		break;
+
+		case 0x05:
+		{
+			return 0x05; //Wing Rotation, same across all versions
+		}
+		break;
+
+		case 0x06:
+		{
+			return 0x06; //Tiki-Taka, same across all versions
+		}
+		break;
+
+		case 0x07:
+		{
+			return 0x07; //Centering Targets, same across all versions
+		}
+		break;
+
+		case 0x08:
+		{
+			if (pesVersion == 17) //Swarm The Box
+				return 0x08;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Defensive Player
+				return 0x0D;
+		}
+		break;
+
+		case 0x09:
+		{
+			if (pesVersion == 17) //Deep Defensive Line
+				return 0x09;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //False Winger
+				return 0x0E;
+		}
+		break;
+
+		case 0x0A:
+		{
+			if (pesVersion == 17) //Gegenpress
+				return 0x0A;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Swarm the Box
+				return 0x08;
+		}
+		break;
+
+		case 0x0B:
+		{
+			if (pesVersion == 17) //Tight Marking
+				return 0x0B;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Deep Defensive Line
+				return 0x09;
+		}
+		break;
+
+		case 0x0C:
+		{
+			if (pesVersion == 17) //Counter Target
+				return 0x0C;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Gegenpress
+				return 0x0A;
+		}
+		break;
+
+		case 0x0D:
+		{
+			if (pesVersion == 17) //Invalid
+				return 0x00;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Tight Marking
+				return 0x0B;
+		}
+		break;
+
+		case 0x0E:
+		{
+			if (pesVersion == 17) //Invalid
+				return 0x00;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Counter Target
+				return 0x0C;
+		}
+		break;
+
+		case 0x0F:
+		{
+			if (pesVersion == 17) //Invalid
+				return 0x00;
+			else if (pesVersion == 18 || pesVersion == 19 || pesVersion == 20 || pesVersion == 21) //Wing Back
+				return 0x0F;
+		}
+		break;
+
+		default:
+		{
+			return 0x00;
+		}
+		break;
+	}
+	return 0x0;
+}
+
+byte get_translated_adv_instruction(byte instruction)
+{
+	switch (instruction)
+	{
+		case 0x01: //Hug The Touchline
+		case 0x02: //False #9
+		case 0x03: //False FulL Backs
+		case 0x04: //Attacking Full Backs
+		case 0x05: //Wing Rotation
+		case 0x06: //Tiki-Taka
+		case 0x07: //Centering Targets
+		{
+			return instruction; //First 7 instructions are the same for all versions
+		}
+		break;
+		
+		case 0x08: //Swarm the Box
+		case 0x09: //Deep Defensive Line
+		case 0x0A: //Gegenpress
+		case 0x0B: //Tight Marking
+		case 0x0C: //Counter Target
+		{
+			if (giPesVersion == 17)
+				return instruction;
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				return instruction + 0x02; //Offset by 2 bytes
+		}
+		break;
+
+		case 0x0D: //Defensive Player
+		{
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				return 0x08;
+		}
+		break;
+
+		case 0x0E: //False Winger
+		{
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				return 0x09;
+		}
+		break;
+
+		case 0x0F: //Wing Back
+		{
+			if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				return 0x0F;
+		}
+		break;
+
+		default:
+		{
+			return 0x00;
+		}
+		break;
+	}
+	return 0x00;
+}
+
+//Launch an Open File dialog box and attempt to open the selected file
+int open_texport(HWND hwnd, int pesVersion, TCHAR* pcs_title)
+{
+	if (giPesVersion == -1)
+	{
+		TCHAR errBuffer[MAX_PATH] = _T("");
+		_stprintf_s(errBuffer, MAX_PATH, _T("Please load an EDIT file first."));
+		MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		return 1;
+	}
+	if (gn_teamsel == -1)
+	{
+		TCHAR errBuffer[MAX_PATH] = _T("");
+		_stprintf_s(errBuffer, MAX_PATH, _T("Please select a team first."));
+		MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+		return 1;
+	}
+	gb_forceupdate = false;
+	gn_forceupdate = -1;
+	gn_listsel = -1;
+
+	OPENFILENAME ofn;
+	TCHAR cs_file_name[MAX_PATH] = _T("");
+	DWORD code;
+	LPEXCEPTION_POINTERS info;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hwnd;
+	//	ofn.lpstrFilter = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+	ofn.lpstrFile = cs_file_name;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+	//	ofn.lpstrDefExt = "txt";
+	ofn.lpstrTitle = pcs_title;
+
+	if (GetOpenFileName(&ofn))
+	{
+		__try
+		{
+			handle_texport(cs_file_name, pesVersion);
+		}
+		__except (code = GetExceptionCode(), info = GetExceptionInformation(), EXCEPTION_EXECUTE_HANDLER)
+			//If file loading fails (usually due to trying to open the wrong type of file for the chosen loader, 
+			// e.g. opening a PES21 save file with the PES19 loading function), report the error and fail gracefully
+		{
+			TCHAR errBuffer[MAX_PATH] = _T("");
+			_stprintf_s(errBuffer, MAX_PATH, _T("File loading failed with code %d.\nThe TEXPORT file may be from a different PES version or may be malformed."),
+				code);
+			MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+			//bool checkthis;
+			//checkthis = (code == EXCEPTION_ACCESS_VIOLATION);
+			//Clear all entries, as no save has been loaded
+			return 1;
+		}
+		return 0;
+	}
+	return 2;
+}
+
+void handle_texport(const TCHAR* pcs_file_name, int pesVersion)
+{
+	int ii, jj, kk, num_on_team, current_byte;
+
+	void* descriptor;
+	const uint8_t* masterKey;
+
+	if (pesVersion == 15)
+	{
+		descriptor = (void*)createFileDescriptor15();
+		uint32_t inputLen = 0;
+		uint8_t* pfin = readFile(pcs_file_name, &inputLen);
+		((FileDescriptor15*)descriptor)->dataSize = inputLen; //IMPORTANT: need to set the dataSize here
+		decryptFile15((FileDescriptor15*)descriptor, pfin);
+
+		current_byte = 0x10298;
+		read_team_tactics15(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
+
+		current_byte = 0x51065C;
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					read_player_entry15(gplayers[jj], current_byte, descriptor, true);
+					read_appearance_entry15_raw(gplayers[jj], current_byte, descriptor);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
+					gplayers[jj].phys_cont = 77;
+					gplayers[jj].b_changed = true;
+					break;
+				}
+			}
+		}
+
+		//First, generate map b/w player ID and Appearance Entry start byte so we can access the correct start byte position
+		// for each player ID when we loop over the Player Entry, even if they're in different orders
+		/*int appearance_byte = 0x2AB9CC;
+		int pid = 0;
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			build_appearance_map15(g_umap_pid_to_startByte, appearance_byte, ghdescriptor);
+		}*/
+
+		//place player info+appearance entries into array of structs
+		/*current_byte = 0x4C;
+		if (gplayers != NULL) delete[] gplayers;
+		gplayers = new player_entry[gnum_players];
+		for (int ii = 0; ii < gnum_players; ii++)
+		{
+			read_player_entry15(gplayers[ii], current_byte, ghdescriptor);
+			read_appearance_entry15(gplayers[ii], g_umap_pid_to_startByte, ghdescriptor);
+		}*/
+
+		//Place team entries into array of structs
+		/*current_byte = 0x44AA6C;
+		if (gteams != NULL) delete[] gteams;
+		gteams = new team_entry[gnum_teams];
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_ids15(gteams[ii], current_byte, ghdescriptor);
+		}*/
+
+		/*current_byte = 0x4E45CC;
+		for (ii = 0; ii < gnum_teams; ii++)
+		{
+			read_team_rosters15(current_byte, ghdescriptor, gteams, gnum_teams);
+		}*/
+	}
+	else if (pesVersion == 16)
+	{
+		descriptor = (void*)createFileDescriptorOld();
+		masterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes16");
+		uint8_t* pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(masterKey));
+
+		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
+		current_byte = 0x10298;
+		fill_team_tactics16(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x510660;
+		//if (gplayers != NULL) delete[] gplayers;
+		//gplayers = new player_entry[gnum_players];
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					fill_player_entry16(gplayers[jj], current_byte, descriptor, true);
+					fill_appearance_entry16(gplayers[jj], current_byte, descriptor, true);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
+					gplayers[jj].phys_cont = 77;
+					gplayers[jj].b_changed = true;
+					break;
+				}
+			}
+		}
+	}
+	else if (pesVersion == 17)
+	{
+		descriptor = (void*)createFileDescriptorOld();
+		masterKey = (const uint8_t*)GetProcAddress(hPesDecryptDLL, "MasterKeyPes17");
+		uint8_t* pfin = readFile(pcs_file_name, NULL);
+		decryptWithKeyOld((FileDescriptorOld*)descriptor, pfin, reinterpret_cast<const char*>(masterKey));
+
+		//Texport files are out of order compared to the EDIT files, and the first thing of value we want from them is the tactics
+		current_byte = 0x10330;
+		fill_team_tactics17(current_byte, descriptor, gteams, gnum_teams, gn_teamsel);
+
+		//place player info+appearance entries into array of structs
+		current_byte = 0x510840;
+		//if (gplayers != NULL) delete[] gplayers;
+		//gplayers = new player_entry[gnum_players];
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					fill_player_entry17(gplayers[jj], current_byte, descriptor, true);
+
+					//Set the properties aren't in 17 to 0 or default;
+					for (int ii = 28; ii < 41; ii++)
+					{
+						gplayers[jj].play_skill[ii] = false;
+					}
+					gplayers[jj].tight_pos = 77;
+					gplayers[jj].aggres = 77;
+					gplayers[jj].b_changed = true;
+					break;
+				}
+			}
+		}
+	}
+	else if (pesVersion >= 18)
+	{
+		//18 and beyond use an entirely different encryption algorithm for the .ted files than earlier, the existing decrypter can't handle it so use a custom function.
+		std::ifstream input_file;
+		input_file.open(pcs_file_name, std::ios::binary);
+		//Ignore the first 30 bytes, they are not important
+		input_file.ignore(0x30);
+		//Load the key we'll use to decrypt the file
+		char key[0x20] = {};
+		char data[2];
+		for (ii = 0; ii < 0x20; ii++)
+		{
+			input_file.read(data, 1);
+			key[ii] = data[0];
+		}
+
+		//Just make the array the length of the longest file for simplicity of reuse
+		byte contents[0x39E4] = {};
+		//Each version starts at a different byte in the key
+		int keyPos = -1, length = -1, tacticsPos = -1, playersPos = -1;
+		if (pesVersion == 18)
+		{
+			keyPos = 0x12;
+			length = 0x1FC0;
+			tacticsPos = 0x32C;
+			playersPos = 0x834;
+		}
+		else if (pesVersion == 19)
+		{
+			keyPos = 0x13;
+			length = 0x25B0;
+			tacticsPos = 0x33C;
+			playersPos = 0x844;
+		}
+		else if (pesVersion == 20 || pesVersion == 21) //20 is untested, but should be mostly the same with probably just a 14 for the keyPos
+		{
+			keyPos = pesVersion == 20 ? 0x14 : 0x15;
+			length = 0x39E4;
+			tacticsPos = 0x410;
+			playersPos = 0x918;
+		}
+
+		for (int currentPos = 0x50; currentPos < length; currentPos++)
+		{
+			input_file.read(data, 1);
+			contents[currentPos] = ((byte)data[0] ^ key[keyPos]);
+			keyPos++;
+			if (keyPos == 0x20)
+				keyPos = 0;
+		}
+
+		if (pesVersion == 18) fill_team_tactics18_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else if (pesVersion == 19) fill_team_tactics19_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else if (pesVersion == 20 || pesVersion == 21) fill_team_tactics20_texport(tacticsPos, contents, gteams, gn_teamsel);
+		else return; //How did you get here?
+
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		for (ii = 0; ii < gteams[gn_teamsel].num_on_team; ii++)
+		{
+			for (jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id == teamOffset + ii)
+				{
+					if (pesVersion == 18) fill_player_entry18_texport(gplayers[jj], playersPos, contents);
+					else if (pesVersion == 19) fill_player_entry19_texport(gplayers[jj], playersPos, contents);
+					else if (pesVersion == 20 || pesVersion == 21) fill_player_entry20_texport(gplayers[jj], playersPos, contents);
+					else return; //How did you get here?
+
+					gplayers[jj].b_changed = true;
+					break;
+				}
+			}
+		}
+	}
+
+	//Find, hide loose players
+	for (ii=0; ii<gnum_players; ii++)
+	{
+		bool match = false;
+		for (jj=0; jj<gnum_teams; jj++)
+		{
+			for (kk=0; kk < gteams->team_max; kk++)
+			{
+				if (gteams[jj].players[kk]==gplayers[ii].id)
+				{
+					match = true;
+					break;
+				}
+			}
+			if (match)
+			{
+				gplayers[ii].team_ind = jj;
+				gplayers[ii].team_lineup_ind = kk;
+				break;
+			}
+		}
+		if (gplayers[ii].team_ind < 0)
+		{
+			//player_entry pe = gplayers[ii]; //DEBUG
+			gplayers[ii].b_show = false;
+		}
+	}
+
+	//Update the player list as if we'd changed teams
+	if (gn_listsel > -1)
+	{
+		gb_forceupdate = true;
+		gn_forceupdate = gn_playind[gn_listsel];
+	}
+	else gb_forceupdate = false;
+	if (gn_forceupdate < 0) gb_forceupdate = false;
+
+	for (num_on_team=0; num_on_team < gteams->team_max; num_on_team++)
+	{
+		if (!gteams[gn_teamsel].players[num_on_team]) break;
+	}
+
+	if (gn_playind != NULL) delete[] gn_playind;
+	gn_playind = new int[num_on_team];
+	for (ii=0; ii<num_on_team; ii++) gn_playind[ii] = -1;
+
+	SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_DELETEALLITEMS, 0, 0);
+	LVITEM lvI;
+	memset(&lvI, 0, sizeof(lvI)); //Zero out struct members
+	lvI.mask = LVIF_TEXT;
+	kk=0;
+	for (ii=0; ii<gnum_players; ii++)
+	{
+		for (jj=0; jj<num_on_team; jj++)
+		{
+			if (gplayers[ii].id == gteams[gn_teamsel].players[jj])
+			{
+				gn_playind[kk] = ii;
+				lvI.pszText = gplayers[ii].name;
+				lvI.iItem = kk;
+				SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_INSERTITEM, 0, (LPARAM)&lvI);
+				kk++;
+				break;
+			}
+		}
+		if (kk==num_on_team) break;
+	}
+
+	if (gplayers && (gn_playind[0] > -1))
+	{
+		ListView_SetItemState(GetDlgItem(ghw_main, IDC_NAME_LIST), 0, LVIS_SELECTED, LVIS_SELECTED);
+		gn_listsel = 0;
+	}
+	else
+	{
+		gn_listsel = -1;
+		show_player_info(-1);
+	}
+
+	//Translate advanced instructions if necessary
+	if (pesVersion > 16 && pesVersion != giPesVersion)
+	{
+		for (ii = 0; ii < 3; ii++)
+		{
+			byte ai1 = get_translated_adv_instruction(translate_adv_instruction(gteams[gn_teamsel].presets[ii].atk_instructions[0].instruction, pesVersion));
+			byte ai2 = get_translated_adv_instruction(translate_adv_instruction(gteams[gn_teamsel].presets[ii].atk_instructions[1].instruction, pesVersion));
+			byte di1 = get_translated_adv_instruction(translate_adv_instruction(gteams[gn_teamsel].presets[ii].def_instructions[0].instruction, pesVersion));
+			byte di2 = get_translated_adv_instruction(translate_adv_instruction(gteams[gn_teamsel].presets[ii].def_instructions[1].instruction, pesVersion));
+			gteams[gn_teamsel].presets[ii].atk_instructions[0].instruction = ai1;
+			gteams[gn_teamsel].presets[ii].atk_instructions[1].instruction = ai2;
+			gteams[gn_teamsel].presets[ii].def_instructions[0].instruction = di1;
+			gteams[gn_teamsel].presets[ii].def_instructions[1].instruction = di2;
+		}
+	}
+	//Set advanced instructions to 0 if importing a 16 texport
+	else if (pesVersion == 16 && pesVersion != giPesVersion)
+	{
+		for (ii = 0; ii < 3; ii++)
+		{
+			gteams[gn_teamsel].presets[ii].atk_instructions[0].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[0].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[1].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].atk_instructions[1].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[0].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[0].player_id = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[1].instruction = 0x00;
+			gteams[gn_teamsel].presets[ii].def_instructions[1].player_id = 0x00;
+		}
+	}
+
+	//Delete teh file descriptor, so that we don't overwrite it li
+	if (pesVersion == 16 || pesVersion == 17)
+		destroyFileDescriptorOld((FileDescriptorOld*)descriptor);
+	else if (pesVersion == 15)
+		destroyFileDescriptor15((FileDescriptor15*)descriptor);
+	descriptor = NULL;
+	masterKey = NULL;
+
+	init_tactics_tab();
+
+	gteams[gn_teamsel].b_changed = true;
+}
+
+
+BOOL CALLBACK bogloDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) //Set current team's player boots and gloves
+{
+	switch (Message)
+	{
+		case WM_INITDIALOG: //when box first opens
+		{
+			TCHAR buffer[20], bootIDChar[20];
+			INT bootID;
+			SendDlgItemMessage(hwnd, IDT_BOOT_END, EM_SETREADONLY, 1, 0);
+			GetDlgItemText(ghw_tab2, IDT_STRP_BOID, buffer, 20);
+			SetDlgItemText(hwnd, IDT_BOOT_START, buffer);
+			bootID = _tstoi(buffer)+22;
+			wsprintfW(buffer, L"%d", bootID);
+			SetDlgItemText(hwnd, IDT_BOOT_END, buffer);
+			GetDlgItemText(ghw_tab2, IDT_STRP_GLID, buffer, 20);
+			SetDlgItemText(hwnd, IDT_BOOT_ID, buffer);
+			SetDlgItemText(hwnd, IDT_GLOVE_ID, buffer);
+			SendDlgItemMessage(hwnd, IDT_BOOT_OPT1, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+			SendDlgItemMessage(hwnd, IDT_GLOVE_OPT1, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);		
+
+			SetClassLongPtr(hwnd, GCLP_HICONSM, (LONG)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_4CC), IMAGE_ICON, 16, 16, 0)); //set 4cc logo as dialog box icon
+		}
+		break;
+
+		case WM_COMMAND:
+		{
+			switch (HIWORD(wParam))
+			{
+				case EN_CHANGE:
+					if (LOWORD(wParam) == IDT_BOOT_START)
+					{
+						TCHAR buffer[20];
+						INT bootID;
+						GetDlgItemText(hwnd, IDT_BOOT_START, buffer,20);
+						bootID = _tstoi(buffer) + 22;
+						wsprintfW(buffer, L"%d", bootID);
+						SetDlgItemText(hwnd, IDT_BOOT_END, buffer);
+					}
+					break;
+
+			}
+
+			switch (LOWORD(wParam))
+			{
+				case IDC_OK: //If the "OK" button is pressed,
+				{
+					int bootID, gloveID, team, playerCounter;
+					player_export srcPlyrExport;
+					wchar_t buffer[18];
+
+					//Update current player entry
+					player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+					if (!(gplayers[gn_playind[gn_listsel]] == pe_current))
+					{
+						if (wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name))
+							pe_current.b_edit_player = true;
+						gplayers[gn_playind[gn_listsel]] = pe_current;
+					}
+
+					//Get current team ID:						
+					SendDlgItemMessage(ghw_main, IDT_TEAM_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+					team = _wtoi(buffer);
+
+					//If "Boot: set incremental value" is set
+					if (SendDlgItemMessage(hwnd, IDT_BOOT_OPT2, BM_GETCHECK, 0, 0)) {
+
+						//Get starting boot:
+						SendDlgItemMessage(hwnd, IDT_BOOT_START, WM_GETTEXT, 18, (LPARAM)buffer);
+						bootID = _wtoi(buffer);
+
+						//Loop through each player
+						playerCounter = 1;
+						for (int ii = 0; ii < gnum_players; ii++)
+						{
+							//Stop if we updated 23 players
+							if (playerCounter >= 24) break;
+							if (gplayers[ii].id == team * 100 + playerCounter)
+							{
+								//Set boot ID
+								gplayers[ii].boot_id = bootID;
+								gplayers[ii].b_changed = true;
+								playerCounter++;
+								bootID++;
+							}
+						}
+					}
+
+					//If "Boot: set all to the same ID" is set
+					if (SendDlgItemMessage(hwnd, IDT_BOOT_OPT3, BM_GETCHECK, 0, 0)) {
+
+						//Get boot ID:
+						SendDlgItemMessage(hwnd, IDT_BOOT_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+						bootID = _wtoi(buffer);
+
+						//Loop through each player
+						playerCounter = 1;
+						for (int ii = 0; ii < gnum_players; ii++)
+						{
+							if (playerCounter >= 24) break;
+							if (gplayers[ii].id == team * 100 + playerCounter)
+							{
+								//Set glove ID
+								gplayers[ii].boot_id = bootID;
+								gplayers[ii].b_changed = true;
+								playerCounter++;
+							}
+						}
+					}
+
+					//If "Glove: set like boot IDs" is set
+					if (SendDlgItemMessage(hwnd, IDT_GLOVE_OPT2, BM_GETCHECK, 0, 0)) {
+						//Loop through each player
+						playerCounter = 1;
+						for (int ii = 0; ii < gnum_players; ii++)
+						{
+							if (playerCounter >= 24) break;
+							if (gplayers[ii].id == team * 100 + playerCounter)
+							{
+								//Set glove ID as boot ID
+								gplayers[ii].glove_id = gplayers[ii].boot_id;
+								gplayers[ii].b_changed = true;
+								playerCounter++;
+							}
+						}
+					}
+
+					//If "Glove: set all to the same ID" is set
+					if (SendDlgItemMessage(hwnd, IDT_GLOVE_OPT3, BM_GETCHECK, 0, 0)) {
+
+						//Get glove ID:
+						SendDlgItemMessage(hwnd, IDT_GLOVE_ID, WM_GETTEXT, 18, (LPARAM)buffer);
+						gloveID = _wtoi(buffer);
+
+						//Loop through each player
+						playerCounter = 1;
+						for (int ii = 0; ii < gnum_players; ii++)
+						{
+							if (playerCounter >= 24) break;
+							if (gplayers[ii].id == team * 100 + playerCounter)
+							{
+								//Set glove ID
+								gplayers[ii].glove_id = gloveID;
+								gplayers[ii].b_changed = true;
+								playerCounter++;
+							}
+						}
+					}
+
+					//Refresh display of currently selected player
+					show_player_info(gn_playind[gn_listsel]);
+
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+
+				case IDC_CANCEL: //If the "Close" button is pressed,
+				{
+					SendMessage(hwnd, WM_CLOSE, 0, 0);
+				}
+				break;
+			}
+		}
+		break;
+
+		case WM_CLOSE:
+			DestroyIcon((HICON)GetClassLongPtr(hwnd, GCLP_HICONSM)); //Destroy the allocated icon to free the GDI resource
+			SetClassLongPtr(hwnd, GCLP_HICONSM, NULL); //Set icon pointer to NULL
+			ghw_stat = NULL;
+			DestroyWindow(hwnd);
+		break;
+
+		default:
+			return FALSE;
+	}
+	return TRUE;
+}
+
+
+//Disable or enable all tactics controls at once
+void toggle_tactics(bool b_enable)
+{
+	gb_tactics_enabled = b_enable;
+
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRESET), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRESET));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLX));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_PLY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_CURPL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_CURPL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLNXT), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLNXT));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLPRV), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PLPRV));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKLG), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKLG));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKSH), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FKSH));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FK2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FK2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKL), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKR), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CKR));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PK), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PK));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_ASTY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_ASTY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_BLD), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_BLD));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AZON), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AZON));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_SLDPOS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_SLDPOS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_DSTY), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_DSTY));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_CAREA), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_CAREA));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRES), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PRES));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_SRNG), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_SRNG));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_DLNE), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_DLNE));
+	EnableWindow(GetDlgItem(ghw_tab4, IDT_TACT_CMPT), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDT_TACT_CMPT));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_ANUM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_ANUM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_DNUM), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_DNUM));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_STATS), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_STATS));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_FLUID));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL4), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL4));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL5), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL5));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL6), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL6));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL7), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL7));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL8), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL8));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL9), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL9));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL10), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL10));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL11), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_PL11));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN1), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN2), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN3), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN3));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN4), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN4));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN5), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN5));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN6), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN6));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN7), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN7));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN8), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN8));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN9), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN9));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN10), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN10));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN11));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN12), b_enable);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BN12));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP));
+	EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2));
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), FALSE);
+	UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL));
+}
+
+
+//Initialized the tactics tab for a given team
+void init_tactics_tab()
+{
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+	{
+		if (!gb_tactics_enabled)
+			toggle_tactics(TRUE);
+
+
+		gi_preset = -1;
+		gi_formation = -1;
+		gi_selected_player_field = -1;
+		gi_selected_player_bench = -1;
+		int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRESET, CB_SETCURSEL, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+
+		//Player Assignments BEGIN
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_RESETCONTENT, 0, 0);
+
+		if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+		{
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_RESETCONTENT, 0, 0);
+
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_SETITEMDATA, 11, 0xFF);
+
+			if (giPesVersion == 17)
+			{
+				for (int ii = 0; ii < 4; ii++)
+				{
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 0, (byte)0x00);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 1, (byte)0x01);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 2, (byte)0x02);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 3, (byte)0x03);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 4, (byte)0x04);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 5, (byte)0x05);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 6, (byte)0x06);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 7, (byte)0x07);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 8, (byte)0x08);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 9, (byte)0x09);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 10, (byte)0x0A);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 11, (byte)0x0C);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETCURSEL, (WPARAM)0, 0);
+				}
+			}
+			else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+			{
+				for (int ii = 0; ii < 4; ii++)
+				{
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 0, (byte)0x00);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Hug the Touchline"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 1, (byte)0x01);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("False No. 9"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 2, (byte)0x02);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("False Full Backs"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 3, (byte)0x03);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Attacking Full Backs"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 4, (byte)0x04);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Wing Rotation"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 5, (byte)0x05);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Tiki-Taka"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 6, (byte)0x06);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Centering Targets"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 7, (byte)0x07);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Defensive"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 8, (byte)0x08);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("False Winger"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 9, (byte)0x09);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Swarm the Box"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 10, (byte)0x0A);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Deep Defensive Line"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 11, (byte)0x0B);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Gegenpress"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 12, (byte)0x0C);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Counter Target"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 13, (byte)0x0E);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_ADDSTRING, 0, (LPARAM)_T("Wing Back"));
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETITEMDATA, 14, (byte)0x0F);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1 + ii*2, CB_SETCURSEL, (WPARAM)0, 0);
+				}
+			}
+		}
+
+		//Indexes of currently selected player for the positions
+		int i_fk_lg = 11, i_fk_sh = 11, i_fk2 = 11, i_ck_left = 11, i_ck_right = 11, i_pk = 11, i_ptj1 = 11, i_ptj2 = 11, i_ptj3 = 11;
+		//Indexes of the Countering Target Advanced Instruction
+		int player_indexes[11];
+		for (int ii = 0; ii < 11; ii++)
+		{
+			int playerId = gteams[gn_teamsel].starting11[ii];
+			for (int jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id - teamOffset == playerId)
+				{
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, ii, playerId);
+					//Update corresponding variable if the current player is the selected one for a position
+					if (i_fk_lg == 11 && gteams[gn_teamsel].fk_taker_long == playerId)
+						i_fk_lg = ii;
+					if (i_fk_sh == 11 && gteams[gn_teamsel].fk_taker_short == playerId)
+						i_fk_sh = ii;
+					if (i_fk2 == 11 && gteams[gn_teamsel].fk_taker_2 == playerId)
+						i_fk2 = ii;
+					if (i_ck_left == 11 && gteams[gn_teamsel].ck_taker_left == playerId)
+						i_ck_left = ii;
+					if (i_ck_right == 11 && gteams[gn_teamsel].ck_taker_right == playerId)
+						i_ck_right = ii;
+					if (i_pk == 11 && gteams[gn_teamsel].pk_taker == playerId)
+						i_pk = ii;
+					if (i_ptj1 == 11 && gteams[gn_teamsel].players_to_join_attack[0] == playerId)
+						i_ptj1 = ii;
+					if (i_ptj2 == 11 && gteams[gn_teamsel].players_to_join_attack[1] == playerId)
+						i_ptj2 = ii;
+					if (i_ptj3 == 11 && gteams[gn_teamsel].players_to_join_attack[2] == playerId)
+						i_ptj3 = ii;
+
+					if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+					{
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETITEMDATA, ii + 1, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_SETITEMDATA, ii + 1, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_SETITEMDATA, ii + 1, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_SETITEMDATA, ii + 1, playerId);
+					}
+
+					player_indexes[ii] == jj;
+					break;
+				}
+			}
+		}
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, 11, 0xFF);
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETCURSEL, i_fk_lg, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETCURSEL, i_fk_sh, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETCURSEL, i_fk2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETCURSEL, i_ck_left, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETCURSEL, i_ck_right, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETCURSEL, i_pk, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETCURSEL, i_ptj1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETCURSEL, i_ptj2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, i_ptj3, 0);
+		if (i_ptj2 == 11)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+		}
+		else
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ3));
+		}
+		if (i_ptj1 == 11)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+		}
+		else
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PTJ2));
+		}
+		//Player Assignments END
+
+		
+		//Disable advanced instructions for 16
+		if (giPesVersion == 16)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL));
+
+			//Update the "numbers in attack" combo boxes with the correct labels
+			SetDlgItemText(ghw_tab4, IDC_STATIC_F28, L"Numbers in atk:");
+			SetDlgItemText(ghw_tab4, IDC_STATIC_F28, L"Numbers in def:");
+		}
+		else if (giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+		{
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2), TRUE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2));
+
+			//Update the "numbers in attack" combo boxes with the correct labels
+			SetDlgItemText(ghw_tab4, IDC_STATIC_F28, L"Auto Atk. level:");
+			SetDlgItemText(ghw_tab4, IDC_STATIC_F34, L"Auto Def. level:");
+		}
+
+		populate_tactics_tab(teamOffset, 0, 0);
+		update_backline(teamOffset);
+	}
+}
+
+
+//Populates the tactics tab's field for the specified preset and formation
+void populate_tactics_tab(int teamOffset, int preset, int formation, bool rebuildPlayerLists, bool preserveSelectedPlayer)
+{
+	gb_updating_tactics = true;
+	if (preset != gi_preset)
+	{
+		Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[preset].fluid);
+		if (preserveSelectedPlayer && gi_selected_player_field != -1)
+		{
+			wchar_t buff_x[4], buff_y[3];
+			swprintf_s(buff_x, 4, L"%d", gteams[gn_teamsel].presets[preset].formations[formation].players[gi_selected_player_field].x);
+			swprintf_s(buff_y, 3, L"%d", gteams[gn_teamsel].presets[preset].formations[formation].players[gi_selected_player_field].y);
+			SetDlgItemText(ghw_tab4, IDT_TACT_PLX, buff_x);
+			SetDlgItemText(ghw_tab4, IDT_TACT_PLY, buff_y);
+		}
+		else
+		{
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_PLPOS, CB_SETCURSEL, 0, 0);
+			SetDlgItemText(ghw_tab4, IDT_TACT_PLX, L"0");
+			SetDlgItemText(ghw_tab4, IDT_TACT_PLY, L"0");
+			SetDlgItemText(ghw_tab4, IDT_TACT_CURPL, L"");
+			EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BTNGK));
+			EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_SWPPL));
+			EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS), FALSE);
+			UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_PLPOS));
+		}
+
+		wchar_t buff_support_range[3], buff_dline[3], buff_compactness[3];
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ASTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_style, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_BLD, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].buildup, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AZON, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].attacking_zone, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_SLDPOS, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].positioning, 0);
+		swprintf_s(buff_support_range, 3, L"%d", gteams[gn_teamsel].presets[preset].support_range);
+		SetDlgItemText(ghw_tab4, IDT_TACT_SRNG, buff_support_range);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_ANUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_attack - 1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_DSTY, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].defensive_style, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CAREA, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].containment_area, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PRES, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].pressure, 0);
+		swprintf_s(buff_dline, 3, L"%d", gteams[gn_teamsel].presets[preset].defensive_line);
+		SetDlgItemText(ghw_tab4, IDT_TACT_DLNE, buff_dline);
+		swprintf_s(buff_compactness, 3, L"%d", gteams[gn_teamsel].presets[preset].compactness);
+		SetDlgItemText(ghw_tab4, IDT_TACT_CMPT, buff_compactness);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_DNUM, CB_SETCURSEL, (int)gteams[gn_teamsel].presets[preset].numbers_in_defense - 1, 0);
+
+		EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[preset].fluid);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM));
+	}
+
+	if (rebuildPlayerLists)
+	{
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_RESETCONTENT, 0, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_RESETCONTENT, 0, 0);
+
+		if (giPesVersion > 16)
+		{
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_RESETCONTENT, 0, 0);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_RESETCONTENT, 0, 0);
+
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_SETITEMDATA, 11, 0xFF);
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+			SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_SETITEMDATA, 11, 0xFF);
+		}
+
+		//Indexes of currently selected player for the positions
+		int i_fk_lg = 11, i_fk_sh = 11, i_fk2 = 11, i_ck_left = 11, i_ck_right = 11, i_pk = 11, i_ptj1 = 11, i_ptj2 = 11, i_ptj3 = 11;
+		//Indexes of the Countering Target Advanced Instruction
+		int player_indexes[11];
+		for (int ii = 0; ii < 11; ii++)
+		{
+			int playerId = gteams[gn_teamsel].starting11[ii];
+			for (int jj = 0; jj < gnum_players; jj++)
+			{
+				if (gplayers[jj].id - teamOffset == playerId)
+				{
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, ii, playerId);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+					SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, ii, playerId);
+					//Update corresponding variable if the current player is the selected one for a position
+					if (i_fk_lg == 11 && gteams[gn_teamsel].fk_taker_long == playerId)
+						i_fk_lg = ii;
+					if (i_fk_sh == 11 && gteams[gn_teamsel].fk_taker_short == playerId)
+						i_fk_sh = ii;
+					if (i_fk2 == 11 && gteams[gn_teamsel].fk_taker_2 == playerId)
+						i_fk2 = ii;
+					if (i_ck_left == 11 && gteams[gn_teamsel].ck_taker_left == playerId)
+						i_ck_left = ii;
+					if (i_ck_right == 11 && gteams[gn_teamsel].ck_taker_right == playerId)
+						i_ck_right = ii;
+					if (i_pk == 11 && gteams[gn_teamsel].pk_taker == playerId)
+						i_pk = ii;
+					if (i_ptj1 == 11 && gteams[gn_teamsel].players_to_join_attack[0] == playerId)
+						i_ptj1 = ii;
+					if (i_ptj2 == 11 && gteams[gn_teamsel].players_to_join_attack[1] == playerId)
+						i_ptj2 = ii;
+					if (i_ptj3 == 11 && gteams[gn_teamsel].players_to_join_attack[2] == playerId)
+						i_ptj3 = ii;
+					if (i_ptj3 == 11 && gteams[gn_teamsel].players_to_join_attack[2] == playerId)
+						i_ptj3 = ii;
+
+					if (giPesVersion > 16)
+					{
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETITEMDATA, ii, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_SETITEMDATA, ii, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_SETITEMDATA, ii, playerId);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_ADDSTRING, 0, (LPARAM)gplayers[jj].name);
+						SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_SETITEMDATA, ii, playerId);
+					}
+
+					player_indexes[ii] == jj;
+					break;
+				}
+			}
+		}
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETITEMDATA, 11, 0xFF);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_ADDSTRING, 0, (LPARAM)_T("Unassigned"));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETITEMDATA, 11, 0xFF);
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKLG, CB_SETCURSEL, i_fk_lg, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FKSH, CB_SETCURSEL, i_fk_sh, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FK2, CB_SETCURSEL, i_fk2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKL, CB_SETCURSEL, i_ck_left, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_CKR, CB_SETCURSEL, i_ck_right, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PK, CB_SETCURSEL, i_pk, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ1, CB_SETCURSEL, i_ptj1, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ2, CB_SETCURSEL, i_ptj2, 0);
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_PTJ3, CB_SETCURSEL, i_ptj3, 0);
+	}
+
+	if (gi_preset != preset || rebuildPlayerLists)
+	{
+		bool enablePlayerSelect = false, populatePlayers = false;
+		int ii, index, instruction, val, len, windowId;
+		for (ii = 0; ii < 4; ii++)
+		{
+			windowId = IDC_TACT_AIA1 + ii*2;
+			if (ii < 2)
+				instruction = gteams[gn_teamsel].presets[preset].atk_instructions[ii].instruction;
+			else
+				instruction = gteams[gn_teamsel].presets[preset].def_instructions[ii - 2].instruction;
+
+			len = SendDlgItemMessage(ghw_tab4, windowId, CB_GETCOUNT, 0, 0);
+			for (index = 0; index < len; index++)
+			{
+				val = SendDlgItemMessage(ghw_tab4, windowId, CB_GETITEMDATA, index, 0);
+				if (instruction == val)
+				{
+					SendDlgItemMessage(ghw_tab4, windowId, CB_SETCURSEL, index, 0);
+					UpdateWindow(GetDlgItem(ghw_tab4, windowId));
+					if (giPesVersion == 17)
+						enablePlayerSelect = instruction == 0x0C; //Counter Target
+					else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+						enablePlayerSelect = instruction == 0x08 || instruction == 0x0E; //Counter Target or Defensive
+
+					if (!populatePlayers && enablePlayerSelect)
+						populatePlayers = true;
+
+					EnableWindow(GetDlgItem(ghw_tab4, windowId + 1), enablePlayerSelect);
+					UpdateWindow(GetDlgItem(ghw_tab4, windowId + 1));
+					break;
+				}
+			}
+		}
+
+		int player_indexes[4]{0, 0, 0, 0};
+		if (giPesVersion > 16)
+		{
+			for (int ii = 0; ii < 11; ii++)
+			{
+				int playerId = gteams[gn_teamsel].starting11[ii], playerIndex = 0;
+				if (!(gteams[gn_teamsel].presets[preset].atk_instructions[0].player_id == playerId
+					|| gteams[gn_teamsel].presets[preset].atk_instructions[1].player_id == playerId
+					|| gteams[gn_teamsel].presets[preset].def_instructions[0].player_id == playerId
+					|| gteams[gn_teamsel].presets[preset].def_instructions[1].player_id == playerId))
+				{
+					continue;
+				}
+
+				for (int jj = 0; jj < gnum_players; jj++)
+				{
+					if (gplayers[jj].id - teamOffset == playerId)
+					{
+						for (int kk = 0; kk < 4; kk++)
+						{
+							if (player_indexes[kk] != 0)
+								continue;
+
+							if (kk < 2)
+							{
+								instruction = gteams[gn_teamsel].presets[preset].atk_instructions[kk].instruction;
+								playerIndex = gteams[gn_teamsel].presets[preset].atk_instructions[kk].player_id;
+							}
+							else
+							{
+								instruction = gteams[gn_teamsel].presets[preset].def_instructions[kk - 2].instruction;
+								playerIndex = gteams[gn_teamsel].presets[preset].def_instructions[kk - 2].player_id;
+							}
+
+							if (giPesVersion == 17)
+								enablePlayerSelect = instruction == 0x0C; //Counter Target
+							else if (giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+								enablePlayerSelect = instruction == 0x08 || instruction == 0x0E; //Counter Target or Defensive
+
+							if (!enablePlayerSelect)
+							{
+								player_indexes[kk] = 0;
+							}
+							else if (playerIndex == playerId)
+							{
+								player_indexes[kk] = ii + 1;
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA1PL, CB_SETCURSEL, player_indexes[0], 0);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA1PL));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AIA2PL, CB_SETCURSEL, player_indexes[1], 0);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AIA2PL));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AID1PL, CB_SETCURSEL, player_indexes[2], 0);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID1PL));
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_AID2PL, CB_SETCURSEL, player_indexes[3], 0);
+		UpdateWindow(GetDlgItem(ghw_tab4, IDC_TACT_AID2PL));
+	}
+
+	for (int ii = 0; ii < 11; ii++)
+	{
+		player_formation_data player = gteams[gn_teamsel].presets[preset].formations[formation].players[ii];
+		set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
+	}
+	RECT rectFormation = create_rect(217, 5, 270, 370);
+	RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
+
+	RECT rectLineup = create_rect(497, 5, 383, 370);
+	RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
+
+	gi_preset = preset;
+	gi_formation = formation;
+	gb_updating_tactics = false;
+}
+
+
+//Pass in the raw byte values of X and Y, will automatically derive the correct positions for them based on the version
+void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y, bool change_name, bool change_pos)
+{
+	int label_size_x = 60, label_size_y = 17, button_size_x = 52, button_size_y = 17;
+	//Add 5 pixels of padding on all sides
+	int box_x = 217 + 5, box_y = 5 + 15, box_width = 260, box_height = 350;
+	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+	{
+		//If gk force X and Y to 52 and 3 if they aren't for visual consistency, since the game will already do that upon match start
+		if (pos == 0x00)
+		{
+			if (player_x != 52) player_x = 52;
+			if (player_y != 3) player_y = 3;
+		}
+
+		//Actual pixel position of the center of the label and button
+		int pixel_x = ((double)player_x / (double)0x68) * box_width;
+		int pixel_y = box_height - (((double)player_y / (double)0x30) * box_height);
+
+		HWND label = GetDlgItem(ghw_tab4, IDC_STATIC_PL1 + index);
+		HWND button = GetDlgItem(ghw_tab4, IDB_TACT_PL1 + index);
+
+		if (change_name)
+		{
+			LPWSTR name;
+			for (int ii = 0; ii < gnum_players; ii++)
+			{
+				if (gplayers[ii].id == player_id)
+				{
+					name = gplayers[ii].name;
+					break;
+				}
+			}
+
+			SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
+		}
+
+		if (change_pos)
+		{
+			LPWSTR position_name = get_position_name_from_byte(pos);
+			SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
+		}
+		int label_x = box_x + min(max(pixel_x - (label_size_x / 2), 0), box_width - label_size_x);
+		int label_y = box_y + min(max(pixel_y - label_size_y, 0), box_height - (label_size_y + button_size_y));
+		int button_x = box_x + min(max(pixel_x - (button_size_x / 2), 0), box_width - button_size_x);
+		int button_y = box_y + min((pixel_y - label_size_y < 0 ? label_size_y : pixel_y), box_height - button_size_y);
+
+		SetWindowPos(label, 0, label_x, label_y, 0, 0, SWP_NOSIZE |  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+		SetWindowPos(button, 0, button_x, button_y, 0, 0, SWP_NOSIZE |  SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+
+		RedrawWindow(label, NULL, NULL, RDW_FRAME | RDW_INVALIDATE);
+		RedrawWindow(button, NULL, NULL, RDW_FRAME | RDW_INVALIDATE);
+	}
+}
+
+wchar_t* get_position_name_from_byte(byte pos)
+{
+	switch (pos)
+	{
+		case 0x01:
+			return L"CB";
+			break;
+		case 0x02:
+			return L"LB";
+			break;
+		case 0x03:
+			return L"RB";
+			break;
+		case 0x04:
+			return L"DMF";
+			break;
+		case 0x05:
+			return L"CMF";
+			break;
+		case 0x06:
+			return L"LMF";
+			break;
+		case 0x07:
+			return L"RMF";
+			break;
+		case 0x08:
+			return L"AMF";
+			break;
+		case 0x09:
+			return L"LWF";
+			break;
+		case 0x0A:
+			return L"RWF";
+			break;
+		case 0x0B:
+			return L"SS";
+			break;
+		case 0x0C:
+			return L"CF";
+			break;
+		default:
+			return L"GK";
+			break;
+	}
+}
+
+
+void update_backline(int teamOffset)
+{
+	int first_x = 507, first_y = 25;
+	int label_size_x = 106, label_size_y = 17, button_size_x = 52, button_size_y = 17;
+	LPWSTR name;
+	LPWSTR position_name;
+	for (int ii = 0; ii < 12; ii++)
+	{
+		int player_id = teamOffset + gteams[gn_teamsel].bench_order[ii];
+		for (int jj = 0; jj < gnum_players; jj++)
+		{
+			if (gplayers[jj].id == player_id)
+			{
+				name = gplayers[jj].name;
+				position_name = get_position_name_from_byte(gplayers[jj].reg_pos);
+				break;
+			}
+		}
+
+		HWND label = GetDlgItem(ghw_tab4, IDC_STATIC_BN1 + ii);
+		HWND button = GetDlgItem(ghw_tab4, IDB_TACT_BN1 + ii);
+
+		SendMessage(label, WM_SETTEXT, 0, (LPARAM)name);
+		SendMessage(button, WM_SETTEXT, 0, (LPARAM)position_name);
+	}
+}
+
+void copyPreset(int p1, int p2) //Copy p1 to p2
+{
+	preset_entry preset = preset_entry(gteams[gn_teamsel].presets[p1]);
+	gteams[gn_teamsel].presets[p2] = preset;
+	gteams[gn_teamsel].b_changed = true;
+	Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[gi_preset].fluid);
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+	if (!gteams[gn_teamsel].presets[gi_preset].fluid)
+	{
+		gi_formation = 0;
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+	}
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void swapPreset(int p1, int p2) //Swap p1 with p2
+{
+	preset_entry old_preset = preset_entry(gteams[gn_teamsel].presets[p1]);
+	gteams[gn_teamsel].presets[p1] = gteams[gn_teamsel].presets[p2];
+	gteams[gn_teamsel].presets[p2] = old_preset;
+	gteams[gn_teamsel].b_changed = true;
+	Button_SetCheck(GetDlgItem(ghw_tab4, IDB_TACT_FLUID), gteams[gn_teamsel].presets[gi_preset].fluid);
+	EnableWindow(GetDlgItem(ghw_tab4, IDC_TACT_FORM), gteams[gn_teamsel].presets[gi_preset].fluid);
+	if (!gteams[gn_teamsel].presets[gi_preset].fluid)
+	{
+		gi_formation = 0;
+		SendDlgItemMessage(ghw_tab4, IDC_TACT_FORM, CB_SETCURSEL, 0, 0);
+	}
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void copyFormation(int f1, int f2) //Copy f1 to f2
+{
+	formation_entry formation = formation_entry(gteams[gn_teamsel].presets[gi_preset].formations[f1]);
+	gteams[gn_teamsel].presets[gi_preset].formations[f2] = formation;
+	gteams[gn_teamsel].b_changed = true;
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+void swapFormation(int f1, int f2) //Swap f1 with f2
+{
+	formation_entry old_formation = formation_entry(gteams[gn_teamsel].presets[gi_preset].formations[f1]);
+	gteams[gn_teamsel].presets[gi_preset].formations[f1] = gteams[gn_teamsel].presets[gi_preset].formations[f2];
+	gteams[gn_teamsel].presets[gi_preset].formations[f2] = old_formation;
+	gteams[gn_teamsel].b_changed = true;
+	int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
+	populate_tactics_tab(teamOffset, gi_preset, gi_formation);
+}
+
+
+RECT create_rect(int x, int y, int width, int height)
+{
+	RECT rect = RECT();
+	rect.left = x;
+	rect.top = y;
+	rect.right = x + width;
+	rect.bottom = y + height;
+	return rect;
+}
+
+
+
+BOOL CALLBACK aatf_sing_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+    switch(Message)
+    {
+        case WM_COMMAND:
+            switch(LOWORD(wParam))
+            {
+                case IDB_AATFOK:
+                    ShowWindow(hwnd, SW_HIDE);
+                break;
+            }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
+BOOL CALLBACK aatf_mult_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+    switch(Message)
+    {
+		case WM_INITDIALOG:
+		{
+			if (vglmode) {
+				aatf_single_vgl(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players, false);
+			}
+			else {
+				aatf_single(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players);
+			}
+			
+			SetFocus(GetDlgItem(hwnd,IDB_AATFOK));
+		}
+		break;
+        case WM_COMMAND:
+            switch(LOWORD(wParam))
+            {
+				case IDB_AATFOK:
+                    EndDialog(hwnd, IDB_AATFOK);
+                break;
+            }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL CALLBACK aatf_mult_dlg_proc_sug(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch (Message)
+	{
+	case WM_INITDIALOG:
+	{
+		if (vglmode) {
+			aatf_single_vgl(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players, true);
+		}
+		else {
+			aatf_single(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players);
+		}
+		
+		SetFocus(GetDlgItem(hwnd, IDB_AATFOK));
+	}
+	break;
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDB_AATFOK:
+			EndDialog(hwnd, IDB_AATFOK);
+			break;
+		}
+		break;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+BOOL CALLBACK aatf_sel_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+    switch(Message)
+    {
+		case WM_INITDIALOG:
+		{
+			for(int ii=0;ii<gnum_teams;ii++)
+			{
+				if(gteams[ii].b_show)
+				{
+					SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_ADDSTRING, 0, (LPARAM)gteams[ii].name);
+				}
+			}
+		}
+		break;
+        case WM_COMMAND:
+            switch(LOWORD(wParam))
+            {
+                case IDC_OK:
+					{
+						ShowWindow(hwnd, SW_HIDE);
+						int selCount = SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_GETSELCOUNT, 0, 0);
+						int *selIndices = new int[selCount];
+						//int *teamIndices = new int[selCount];
+						int teamInd;
+						SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_GETSELITEMS, (WPARAM)selCount, (LPARAM)selIndices);
+						for(int ii=0; ii<selCount; ii++)
+						{
+							teamInd = gn_teamCbIndToArray[selIndices[ii]];
+							DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF), hwnd, aatf_mult_dlg_proc, teamInd);
+						}
+
+						delete [] selIndices;
+						//delete [] teamIndices;
+						EndDialog(hwnd, IDC_OK);
+					}
+                break;
+				case IDC_CANCEL:
+                    EndDialog(hwnd, IDC_CANCEL);
+                break;
+            }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL CALLBACK aatf_sel_dlg_proc_sug(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch (Message)
+	{
+	case WM_INITDIALOG:
+	{
+		for (int ii = 0; ii < gnum_teams; ii++)
+		{
+			if (gteams[ii].b_show)
+			{
+				SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_ADDSTRING, 0, (LPARAM)gteams[ii].name);
+			}
+		}
+	}
+	break;
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDC_OK:
+		{
+			ShowWindow(hwnd, SW_HIDE);
+			int selCount = SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_GETSELCOUNT, 0, 0);
+			int* selIndices = new int[selCount];
+			//int *teamIndices = new int[selCount];
+			int teamInd;
+			SendDlgItemMessage(hwnd, IDC_AATF_SEL, LB_GETSELITEMS, (WPARAM)selCount, (LPARAM)selIndices);
+			for (int ii = 0; ii < selCount; ii++)
+			{
+				teamInd = gn_teamCbIndToArray[selIndices[ii]];
+				DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_AATF), hwnd, aatf_mult_dlg_proc_sug, teamInd);
+			}
+
+			delete[] selIndices;
+			//delete [] teamIndices;
+			EndDialog(hwnd, IDC_OK);
+		}
+		break;
+		case IDC_CANCEL:
+			EndDialog(hwnd, IDC_CANCEL);
+			break;
+		}
+		break;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+BOOL CALLBACK aatf_comp_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+    switch(Message)
+    {
+		case WM_INITDIALOG:
+		{
+			TCHAR* cs_file_path = (TCHAR*)lParam;
+			void *hc_descriptor = NULL;
+			__try
+			{
+				save_comparator(hwnd, giPesVersion, gplayers, gnum_players, gteams, gnum_teams, cs_file_path, hc_descriptor);
+			}
+			__except(EXCEPTION_EXECUTE_HANDLER)
+			{
+				TCHAR errBuffer[MAX_PATH] = _T("");
+				_stprintf_s(errBuffer, MAX_PATH, _T("File decryption failed with code %d.\nThe EDIT file is from a different PES version and cannot be used for comparison."),
+					GetExceptionCode());
+				MessageBox(ghw_main, errBuffer, _T("Error!"), MB_ICONEXCLAMATION | MB_OK);
+				if(hc_descriptor) 
+				{
+					if (giPesVersion >= 18)
+						destroyFileDescriptorNew((FileDescriptorNew*)hc_descriptor);
+					else if (giPesVersion >= 16)
+						destroyFileDescriptorOld((FileDescriptorOld*)hc_descriptor);
+					else
+						destroyFileDescriptor15((FileDescriptor15*)hc_descriptor);
+					hc_descriptor = NULL;
+				}
+				EndDialog(hwnd, IDB_AATFOK);
+			}
+		}
+		break;
+        case WM_COMMAND:
+            switch(LOWORD(wParam))
+            {
+                case IDB_AATFOK:
+				{
+					EndDialog(hwnd, IDB_AATFOK);
+				}
+                break;
+            }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
+void update_tables()
+{
+	if(gn_listsel < 0) 
+		return;
+
+	//First update the data structure to reflect any changes the user has made to the current player/team
+	player_entry pe_current = get_form_player_info(gn_playind[gn_listsel]);
+	if( !(gplayers[gn_playind[gn_listsel]] == pe_current) )
+	{
+		if( wcscmp(gplayers[gn_playind[gn_listsel]].name, pe_current.name) )
+			pe_current.b_edit_player = true;
+		gplayers[gn_playind[gn_listsel]] = pe_current;
+		
+		//Update displayed name
+		LVITEM lvI;
+		memset(&lvI,0,sizeof(lvI)); //Zero out struct members
+		lvI.mask = LVIF_TEXT;
+		lvI.pszText = pe_current.name;
+		lvI.iItem = gn_listsel;
+		SendDlgItemMessage(ghw_main, IDC_NAME_LIST, LVM_SETITEM, 0, (LPARAM)&lvI);
+
+		show_player_info(gn_playind[gn_listsel]);
+	}
+
+	//Check and update team tables
+	team_entry te_current;
+	if( get_form_team_info(gn_playind[gn_listsel], te_current) )
+	{
+		int ti = gplayers[gn_playind[gn_listsel]].team_ind;
+		if( !(gteams[ti] == te_current) )
+		{
+			gteams[ti] = te_current;
+
+			//Update combobox
+			int csel = SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_GETCURSEL, 0, 0);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_DELETESTRING, gn_teamArrayIndToCb[ti]+1, 0);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_INSERTSTRING, gn_teamArrayIndToCb[ti]+1, (LPARAM)te_current.name);
+			SendDlgItemMessage(ghw_main, IDC_TEAM_LIST, CB_SETCURSEL, csel, 0);								
+		}
+	}
+}
