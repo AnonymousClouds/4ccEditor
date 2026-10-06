@@ -1481,7 +1481,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 			if (numBronze > globalStats::allowedBronze)
 			{
 				errorTot++;
-				errorMsg << _T("T\too many Bronze medals;\r\n");
+				errorMsg << _T("\tToo many Bronze medals;");
 			}
 			if (player.form + 1 != form)
 			{
