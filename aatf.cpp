@@ -1653,7 +1653,7 @@ void aatf_single_vgl(HWND hAatfbox, int pesVersion, int teamSel, player_entry* g
 		else
 		{
 			errorTot++;
-			errorMsg << _T("\tIllegal Ability scores, this player's height does not match any available player types;\r\n"); //mentions that height is what is being checked
+			errorMsg << _T("\tIllegal Ability scores, this player's stats does not match any available player types;\r\n"); //mentions that stats is what is being checked
 			//spit out whatever errors were already found, but target scores can't be set, so quit out of this player to avoid useless error outputs
 			msgOut += errorMsg.str();
 			continue;
