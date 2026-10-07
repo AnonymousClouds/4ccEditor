@@ -3,12 +3,12 @@
 #include "resource.h"
 #include "editor.h"
 #include "window.h"
-#include "aatf.h"
+#include "ruleset.h"
 #include <string>
+#include <vector>
 #include <Windows.h>
 #pragma comment(lib, "Winmm.lib")
 #include <mmsystem.h>
-#include "stats.h"
 
 //----------------------------------------------------------------------
 /*Function prototypes*/
@@ -129,7 +129,6 @@ int gn_oldysize = 642;
 int g_prevx=0;
 int giPesVersion = 0;
 int g_bumpAmount = 0;
-bool vglmode = true;
 const uint8_t* gpMasterKey;
 int gi_preset, gi_formation, gi_selected_player_field = -1, gi_selected_player_bench = -1;
 bool gb_tactics_enabled = false;
@@ -203,24 +202,13 @@ int APIENTRY _tWinMain(HINSTANCE I, HINSTANCE PI, LPTSTR CL, int SC)
 	int retval = loadDLL();
 	if(retval) return retval;
 
-	if (vglmode) {
-		ghw_main = CreateWindowEx(
-			0,
-			wc.lpszClassName,
-			_T("4ccEditor VGL 26 Edition (Version H)"),
-			WS_OVERLAPPEDWINDOW,
-			20, 20, 1320 + 144, 700,
-			NULL, NULL, ghinst, NULL);
-	}
-	else {
-		ghw_main = CreateWindowEx(
-			0,
-			wc.lpszClassName,
-			_T("4ccEditor Autumn 25 Edition (Version B)"),
-			WS_OVERLAPPEDWINDOW,
-			20, 20, 1320 + 144, 700,
-			NULL, NULL, ghinst, NULL);
-	}
+	ghw_main = CreateWindowEx(
+		0,
+		wc.lpszClassName,
+		_T("4ccEditor"),
+		WS_OVERLAPPEDWINDOW,
+		20, 20, 1320 + 144, 700,
+		NULL, NULL, ghinst, NULL);
 
 	if(ghw_main == NULL)
 	{
@@ -231,11 +219,32 @@ int APIENTRY _tWinMain(HINSTANCE I, HINSTANCE PI, LPTSTR CL, int SC)
 
 	srand(time(NULL));
 
+	//Load the saved configuration options; if there's no settings file,
+	//  display the Settings window so the options can be set
+	bool b_settings_loaded = load_settings();
+
+	//Lay out the Make ... / Add Color buttons to match the loaded options
+	apply_autocolor_layout(gb_autoColorNames);
+	update_make_buttons_enabled();
+	update_ruleset_menu();
+	update_logo_bitmap();
+	update_skill_card_labels();
+
 	ShowWindow(ghw_main, SC);
 	UpdateWindow(ghw_main);
 
+	if(!b_settings_loaded) show_settings(ghw_main);
+
+	//Keyboard hotkeys, e.g. Alt+G for Make Gold and Ctrl+T for the AATF
+	//  suggestions (see IDR_ACCELERATORS in resource.rc)
+	HACCEL h_accel = LoadAccelerators(ghinst, MAKEINTRESOURCE(IDR_ACCELERATORS));
+
 	while(GetMessage(&msg, NULL, 0, 0) > 0)
 	{
+		if( ghw_settings && IsWindowVisible(ghw_settings) && IsDialogMessage(ghw_settings, &msg) )
+			continue;
+		if( TranslateAccelerator(ghw_main, h_accel, &msg) )
+			continue;
 		if( !IsDialogMessage(ghw_main, &msg) )
 		{
 			TranslateMessage(&msg);
@@ -243,6 +252,386 @@ int APIENTRY _tWinMain(HINSTANCE I, HINSTANCE PI, LPTSTR CL, int SC)
 		}
 	}
 	return msg.wParam;
+}
+
+//----------------------------------------------------------------------
+/*Colour tag helpers. A colour tag is a 10 character string, made up of Device
+  Control 1 (0x11) followed by 9 hexadecimal digits, e.g. the tag that
+  IDB_MAKE_GOLD_COLOR puts in front of the player name*/
+
+//Colour tags used by the Add Color buttons
+static const wchar_t gcs_color_gold[] = L"\x11" L"ccc9900ff";
+static const wchar_t gcs_color_silv[] = L"\x11" L"cccccccff";
+static const wchar_t gcs_color_bron[] = L"\x11" L"c8b5f55ff";
+
+//Returns true if wch is one of 0-9, a-f or A-F
+static bool is_hex_digit(wchar_t wch)
+{
+	return (wch >= L'0' && wch <= L'9') || (wch >= L'a' && wch <= L'f') || (wch >= L'A' && wch <= L'F');
+}
+
+//Returns true if the name starts with a colour tag
+static bool has_color_tag(const wchar_t* pc_name)
+{
+	if(pc_name[0] != L'\x11') return false;	//Must start with Device Control 1
+	for(int ii = 1; ii < 10; ii++)				//Followed by 9 hexadecimal digits
+		if(!is_hex_digit(pc_name[ii])) return false;
+	return true;
+}
+
+//Removes a leading colour tag from the name, if there is one
+static void strip_color_tag(wchar_t* pc_name)
+{
+	if(!has_color_tag(pc_name)) return;
+
+	int ii = 0;
+	while((pc_name[ii] = pc_name[ii + 10]) != 0) ii++;
+}
+
+//Puts the colour tag in front of the player name, replacing any existing tag
+static void apply_name_color(const wchar_t* pc_tag)
+{
+	wchar_t oldName[0x1000];
+	wchar_t newName[0x1010];
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
+	strip_color_tag(oldName);
+
+	newName[0] = 0;
+	wcscat(newName, pc_tag);
+	wcscat(newName, oldName);
+
+	SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+}
+
+//----------------------------------------------------------------------
+/*Layout of the Make ... / Add Color buttons. With Auto-Color Names switched on
+  the Add Color buttons aren't needed, so they are hidden and the Make ...
+  buttons are widened into the space they leave behind*/
+void apply_autocolor_layout(bool b_auto_color)
+{
+	//Controls laid out by setup_main() in window.cpp
+	const int an_make_ids[3] = { IDB_MAKE_GOLD, IDB_MAKE_SILV, IDB_MAKE_BRON };
+	const int an_color_ids[3] = { IDB_MAKE_GOLD_COLOR, IDB_MAKE_SILV_COLOR, IDB_MAKE_BRON_COLOR };
+	//Design unit widths of the Make ... buttons, must match setup_main() in window.cpp
+	const int n_make_width = b_auto_color ? 250 : 170;	//250 = 170 wide button + 10 gap + 70 wide Add Color button
+
+	if(!IsWindow(ghw_main)) return;
+
+	RECT rcClient;
+	resize_info ri;
+	GetClientRect(ghw_main, &rcClient);
+	ri.scale = (float)(rcClient.bottom - rcClient.top) / 642.0;	//Same scale WM_SIZE uses
+	ri.hdefer = NULL;
+
+	for(int ii = 0; ii < 3; ii++)
+	{
+		HWND hw_make = GetDlgItem(ghw_main, an_make_ids[ii]);
+		HWND hw_color = GetDlgItem(ghw_main, an_color_ids[ii]);
+		if(!hw_make || !hw_color) continue;
+
+		//Widen the button in the design rectangle it is scaled from, so the new
+		//layout also survives the next resize, then rescale it there and then
+		DWORD_PTR pdw_ref = 0;
+		if(GetWindowSubclass(hw_make, scale_cntl_proc, 0, &pdw_ref) && pdw_ref)
+		{
+			RECT* prc_design = (RECT*)pdw_ref;
+			prc_design->right = prc_design->left + n_make_width;
+		}
+		SendMessage(hw_make, UM_SCALE, 0, (LPARAM)&ri);
+
+		ShowWindow(hw_color, b_auto_color ? SW_HIDE : SW_SHOW);
+	}
+
+	//The buttons are moved with SWP_NOREDRAW (see scale_cntl_proc), so the
+	//  area they leave behind is not repainted. Do the same redraw WM_SIZE
+	//  does, so no resize is needed to clear the artifacts.
+	EnumChildWindows(ghw_main, draw_children, 0);
+	InvalidateRect(ghw_main, NULL, TRUE);
+}
+
+//----------------------------------------------------------------------
+/*Make ... buttons. Every value comes from the selected ruleset, so a made
+  player matches the tournament rules. Without a ruleset the buttons are
+  disabled (AATF_<CLASS>_COUNT defaults to 0) and nothing can be made.*/
+
+//Fill the ability, form, injury and weak foot fields from a ruleset class
+static void set_make_values(const aatf_ruleset::Ruleset& rs, int classId)
+{
+	const aatf_ruleset::PlayerClass& pc = rs.classes[classId];
+	TCHAR cs_buf[8];
+
+	for(int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
+	{
+		int ab = (ii - IDT_ABIL_ATKP) / 2;
+		int value = pc.baseStat;
+		if(ab < aatf_ruleset::ABILITY_COUNT && rs.bonusAffects[classId])
+			value += rs.abilityBonus[ab];
+		_itow_s(value, cs_buf, 8, 10);
+		SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	}
+
+	_itow_s(pc.form, cs_buf, 8, 10);
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	_itow_s(pc.injuryResistance, cs_buf, 8, 10);
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	_itow_s(pc.weakUse, cs_buf, 8, 10);
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	_itow_s(pc.weakAcc, cs_buf, 8, 10);
+	SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)cs_buf);
+}
+
+//----------------------------------------------------------------------
+//Grey out the Make ... buttons for classes the selected ruleset does not use
+//  (AATF_<CLASS>_COUNT = 0). With no ruleset all counts are treated as 0,
+//  so every Make ... button is disabled.
+void update_make_buttons_enabled()
+{
+	if(!IsWindow(ghw_main)) return;
+
+	aatf_ruleset::Ruleset rs;
+	bool b_loaded = aatf_ruleset::load_selected(rs);
+
+	const int an_class[4] = { aatf_ruleset::CLASS_GOLD, aatf_ruleset::CLASS_SILVER, aatf_ruleset::CLASS_BRONZE, aatf_ruleset::CLASS_REGULAR };
+	const int an_buttons[4] = { IDB_MAKE_GOLD, IDB_MAKE_SILV, IDB_MAKE_BRON, IDB_MAKE_REGU };
+
+	for(int ii = 0; ii < 4; ii++)
+	{
+		HWND hw_btn = GetDlgItem(ghw_main, an_buttons[ii]);
+		if(!hw_btn) continue;
+		bool b_enable = b_loaded && (rs.classes[an_class[ii]].count > 0);
+		EnableWindow(hw_btn, b_enable ? TRUE : FALSE);
+	}
+}
+
+//----------------------------------------------------------------------
+/*Ruleset PES_VERSION: the matching "Load PES## Edit file" item in the File
+  menu is drawn in bold so it is obvious which file version the selected
+  ruleset expects. Menus have no per-item font, so that item is owner-drawn.*/
+
+static const int gan_pes_menu_ids[7] =
+{
+	ID_FILE_OPEN_15_EN, ID_FILE_OPEN_16_EN, ID_FILE_OPEN_17_EN, ID_FILE_OPEN_18_EN,
+	ID_FILE_OPEN_19_EN, ID_FILE_OPEN_20_EN, ID_FILE_OPEN_21_EN
+};
+
+static const TCHAR* gapc_pes_menu_text[7] =
+{
+	_T("&Load 15 Edit file (encrypted)\tCtrl+5"),
+	_T("&Load 16 Edit file (encrypted)\tCtrl+6"),
+	_T("&Load 17 Edit file (encrypted)\tCtrl+7"),
+	_T("&Load 18 Edit file (encrypted)\tCtrl+8"),
+	_T("&Load 19 Edit file (encrypted)\tCtrl+9"),
+	_T("&Load 20 Edit file (encrypted)\tCtrl+0"),
+	_T("&Load 21 Edit file (encrypted)\tCtrl+1")
+};
+
+//System menu font and a bold version of it
+static HFONT create_menu_font(bool b_bold)
+{
+	HFONT hf = NULL;
+
+	NONCLIENTMETRICS ncm;
+	memset(&ncm, 0, sizeof(ncm));
+	ncm.cbSize = sizeof(ncm);
+	if(SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
+	{
+		if(b_bold) ncm.lfMenuFont.lfWeight = FW_BOLD;
+		hf = CreateFontIndirect(&ncm.lfMenuFont);
+	}
+	if(!hf) hf = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+	return hf;
+}
+
+static HFONT get_menu_font()
+{
+	static HFONT hf_menu = NULL;
+	if(!hf_menu) hf_menu = create_menu_font(false);
+	return hf_menu;
+}
+
+static HFONT get_menu_bold_font()
+{
+	static HFONT hf_bold = NULL;
+	if(!hf_bold) hf_bold = create_menu_font(true);
+	return hf_bold;
+}
+
+//PES version whose "Load ## Edit file" item is bold (0 = none)
+static int gn_ruleset_pes_menu = 0;
+
+//Split "text\taccelerator" in the two parts the menu draws separately
+static void split_menu_text(const TCHAR* pc_text, TCHAR* pc_left, int n_left, const TCHAR** ppc_acc)
+{
+	const TCHAR* pc_tab = _tcschr(pc_text, _T('\t'));
+	if(pc_tab)
+	{
+		int n = (int)(pc_tab - pc_text);
+		if(n > n_left - 1) n = n_left - 1;
+		_tcsncpy_s(pc_left, n_left, pc_text, n);
+		*ppc_acc = pc_tab + 1;
+	}
+	else
+	{
+		_tcsncpy_s(pc_left, n_left, pc_text, _TRUNCATE);
+		*ppc_acc = NULL;
+	}
+}
+
+static void draw_pes_menu_item(LPDRAWITEMSTRUCT lpdis)
+{
+	const TCHAR* pc_text = (const TCHAR*)lpdis->itemData;
+	if(!pc_text) return;
+
+	TCHAR cs_left[128];
+	const TCHAR* pc_acc = NULL;
+	split_menu_text(pc_text, cs_left, 128, &pc_acc);
+
+	bool b_selected = (lpdis->itemState & ODS_SELECTED) != 0;
+	bool b_gray = (lpdis->itemState & (ODS_DISABLED | ODS_GRAYED)) != 0;
+
+	FillRect(lpdis->hDC, &lpdis->rcItem, GetSysColorBrush(b_selected ? COLOR_HIGHLIGHT : COLOR_MENU));
+	SetBkMode(lpdis->hDC, TRANSPARENT);
+	SetTextColor(lpdis->hDC, GetSysColor(b_gray ? COLOR_GRAYTEXT :
+		(b_selected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT)));
+
+	int n_pes = 15 + (int)(lpdis->itemID - ID_FILE_OPEN_15_EN);
+	HFONT hf_old = (HFONT)SelectObject(lpdis->hDC,
+		(n_pes == gn_ruleset_pes_menu) ? get_menu_bold_font() : get_menu_font());
+	RECT rc = lpdis->rcItem;
+	rc.left += 20;	//Leave room for the check mark column
+	rc.right -= 14;
+	DrawText(lpdis->hDC, cs_left, -1, &rc, DT_SINGLELINE | DT_VCENTER | DT_LEFT);
+	if(pc_acc)
+	{
+		RECT rc_acc = rc;
+		DrawText(lpdis->hDC, pc_acc, -1, &rc_acc, DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX);
+	}
+	SelectObject(lpdis->hDC, hf_old);
+}
+
+static void measure_pes_menu_item(LPMEASUREITEMSTRUCT lpmis)
+{
+	const TCHAR* pc_text = (const TCHAR*)lpmis->itemData;
+	if(!pc_text) return;
+
+	TCHAR cs_left[128];
+	const TCHAR* pc_acc = NULL;
+	split_menu_text(pc_text, cs_left, 128, &pc_acc);
+
+	HDC hdc = GetDC(ghw_main);
+	int n_pes = 15 + (int)(lpmis->itemID - ID_FILE_OPEN_15_EN);
+	HFONT hf_old = (HFONT)SelectObject(hdc,
+		(n_pes == gn_ruleset_pes_menu) ? get_menu_bold_font() : get_menu_font());
+	SIZE s_left = { 0, 0 };
+	SIZE s_acc = { 0, 0 };
+	GetTextExtentPoint32(hdc, cs_left, (int)_tcslen(cs_left), &s_left);
+	if(pc_acc) GetTextExtentPoint32(hdc, pc_acc, (int)_tcslen(pc_acc), &s_acc);
+	SelectObject(hdc, hf_old);
+	ReleaseDC(ghw_main, hdc);
+
+	lpmis->itemWidth = s_left.cx + 20 + 24 + s_acc.cx + 8;
+	lpmis->itemHeight = max(s_left.cy, s_acc.cy) + 4;
+}
+
+//All "Load ## Edit file" items are owner-drawn so the item for the selected
+//  ruleset's PES version can be drawn in bold; the strings live in
+//  gapc_pes_menu_text and the active version is gn_ruleset_pes_menu
+static void set_pes_menu_owner_draw()
+{
+	HMENU hMenu = GetMenu(ghw_main);
+	if(!hMenu) return;
+	HMENU hFile = GetSubMenu(hMenu, 0);
+	if(!hFile) return;
+
+	for(int ii = 0; ii < 7; ii++)
+	{
+		MENUITEMINFO mii;
+		memset(&mii, 0, sizeof(mii));
+		mii.cbSize = sizeof(mii);
+		mii.fMask = MIIM_FTYPE | MIIM_DATA;
+		mii.fType = MFT_OWNERDRAW;
+		mii.dwItemData = (ULONG_PTR)gapc_pes_menu_text[ii];
+		SetMenuItemInfo(hFile, gan_pes_menu_ids[ii], FALSE, &mii);
+	}
+}
+
+//Bold the File menu item for the PES version the selected ruleset wants
+void update_ruleset_menu()
+{
+	if(!IsWindow(ghw_main)) return;
+
+	set_pes_menu_owner_draw();
+
+	aatf_ruleset::Ruleset rs;
+	gn_ruleset_pes_menu = aatf_ruleset::load_selected(rs) ? rs.pesVersion : 0;
+
+	DrawMenuBar(ghw_main);
+}
+
+//----------------------------------------------------------------------
+/*Auto-Manlet: when the height field is set to the manlet class height and
+  the active height bracket allows the manlet buff, add the class's manlet
+  stat bonus and raise Weak Foot Usage/Accuracy to the bracket's values*/
+
+//Called when the user edits the height field
+static void apply_auto_manlet()
+{
+	if(!gb_autoManlet) return;
+	if(gn_listsel < 0 || gn_playind == NULL || gplayers == NULL || gteams == NULL) return;
+
+	player_entry& player = gplayers[gn_playind[gn_listsel]];
+	if(player.team_ind < 0 || player.team_ind >= gnum_teams) return;
+	team_entry& team = gteams[player.team_ind];
+
+	int height = GetDlgItemInt(ghw_main, IDT_PLAY_HGT, NULL, FALSE);
+	if(height <= 0) return;
+	if((int)player.height == height) return;	//Unchanged: nothing to do
+
+	aatf_ruleset::Ruleset rs;
+	if(!aatf_ruleset::load_selected(rs)) return;
+
+	//The team's heights with the edited player's new height in place
+	std::vector<int> an_heights;
+	for(int pi = 0; pi < team.num_on_team; pi++)
+	{
+		int h = 0;
+		for(int gj = 0; gj < gnum_players; gj++)
+			if(gplayers[gj].id == team.players[pi])
+			{
+				h = (gplayers[gj].id == player.id) ? height : (int)gplayers[gj].height;
+				break;
+			}
+		an_heights.push_back(h);
+	}
+
+	//Read the current ability values
+	int an_current[aatf_ruleset::ABILITY_COUNT];
+	for(int ab = 0; ab < aatf_ruleset::ABILITY_COUNT; ab++)
+		an_current[ab] = GetDlgItemInt(ghw_tab1, IDT_ABIL_ATKP + ab * 2, NULL, FALSE);
+
+	int an_filled[aatf_ruleset::ABILITY_COUNT];
+	int n_weakUse = 0, n_weakAcc = 0;
+	if(!aatf_ruleset::auto_manlet_values(rs, an_heights.empty() ? NULL : &an_heights[0], (int)an_heights.size(),
+		height, giPesVersion, player.reg_pos == 0, an_current, an_filled, n_weakUse, n_weakAcc))
+		return;
+
+	TCHAR cs_buf[8];
+	for(int ab = 0; ab < aatf_ruleset::ABILITY_COUNT; ab++)
+	{
+		_itow_s(an_filled[ab], cs_buf, 8, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_ATKP + ab * 2, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	}
+	if(n_weakUse != 0)
+	{
+		_itow_s(n_weakUse, cs_buf, 8, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	}
+	if(n_weakAcc != 0)
+	{
+		_itow_s(n_weakAcc, cs_buf, 8, 10);
+		SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)cs_buf);
+	}
 }
 
 //Message loop for the main window
@@ -392,6 +781,16 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			SD_OnHVScroll(GetDlgItem(H, IDC_HSCROLL), SB_CTL, LOWORD(W));
 		}
 		break;
+		case WM_MEASUREITEM:
+		{
+			LPMEASUREITEMSTRUCT lpmis = (LPMEASUREITEMSTRUCT)L;
+			if(lpmis->CtlType == ODT_MENU && lpmis->itemData)
+			{
+				measure_pes_menu_item(lpmis);
+				return TRUE;
+			}
+		}
+		break;
 		case WM_DRAWITEM:
 		{
 			LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)L; // item drawing information
@@ -400,6 +799,12 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			TCHAR szTabText[30];
 			HBRUSH hbr;
 			COLORREF bkColor;
+
+			if (lpdis->CtlType == ODT_MENU && lpdis->itemData)	//Ruleset PES version item
+			{
+				draw_pes_menu_item(lpdis);
+				return TRUE;
+			}
 
 			if (hTabCtrl == lpdis->hwndItem)   // is this the tab control?
 			{
@@ -705,6 +1110,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 		}
 		break;
 		case WM_CLOSE:
+			save_settings(); //Write out any changed options
 			if(ghdescriptor) 
 			{
 				if(giPesVersion >= 18)
@@ -749,10 +1155,33 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			int ret;
 			int prevPesVersion;
 			memset(buffer, 0, sizeof(buffer));
+			//Hotkeys for the Make ... buttons arrive as accelerator commands (see
+			//  IDR_ACCELERATORS) with HIWORD(W) set to 1; present them to the switch
+			//  below exactly like a click on the corresponding button. They do
+			//  nothing until an EDIT file is loaded, since the Make ... handlers
+			//  work on the loaded player data (Make Regular would even crash).
+			//  Make Regular additionally needs a selected player
+			if( HIWORD(W) == 1 && ghdescriptor != NULL &&
+				(LOWORD(W) == IDB_MAKE_GOLD || LOWORD(W) == IDB_MAKE_SILV ||
+				LOWORD(W) == IDB_MAKE_BRON ||
+				(LOWORD(W) == IDB_MAKE_REGU && gn_listsel > -1)) )
+			{
+				const int n_btn = LOWORD(W);
+				W = MAKEWPARAM(n_btn, BN_CLICKED);
+				L = (LPARAM)GetDlgItem(H, n_btn);
+			}
 			switch(LOWORD(W))
 			{
 				case ID_FILE_EXIT:
 					PostMessage(H, WM_CLOSE, 0, 0);
+				break;
+				case ID_FILE_SETTINGS:
+					show_settings(H);
+				break;
+				case IDT_PLAY_HGT:
+					//Auto-Manlet: only fires when the height really changed
+					if(HIWORD(W) == EN_CHANGE)
+						apply_auto_manlet();
 				break;
 				case ID_FILE_OPEN_15_EN:
 					prevPesVersion = giPesVersion;
@@ -1068,66 +1497,15 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if(HIWORD(W)==BN_CLICKED)
 					{
-						if (vglmode) {
+						if(!IsWindowEnabled(GetDlgItem(ghw_main, IDB_MAKE_GOLD))) break;
 
-							using namespace gold; //use gold stats only
-							int ii;
-							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-							{
-								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-								}
-								else //stat is changed
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-								}
-
-							}
-
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-
-							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());;
-
-							/*
-							_itow_s(goldRate_vgl, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldForm_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldIR_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
-							*/
-
-						}
-						else {
-							_itow_s(goldRate, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldForm, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldIR, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldWeakFootUse, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(goldWeakFootAcc, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
-						}
+						aatf_ruleset::Ruleset rs;
+						if(aatf_ruleset::load_selected(rs))
+							set_make_values(rs, aatf_ruleset::CLASS_GOLD);
+						//Auto-Color Names: apply the gold colour tag straight away
+						if(gb_autoColorNames)
+							SendMessage(ghw_main, WM_COMMAND, MAKEWPARAM(IDB_MAKE_GOLD_COLOR, BN_CLICKED),
+								(LPARAM)GetDlgItem(ghw_main, IDB_MAKE_GOLD_COLOR));
 					}
 				}
 				break;
@@ -1135,16 +1513,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if (HIWORD(W) == BN_CLICKED)
 					{
-						wchar_t oldName[0x1000];
-						wchar_t newName[0x1000];
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
-
-						newName[0] = 0;
-						wcscat(newName, L"ccc9900ff");
-						wcscat(newName, oldName);
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+						apply_name_color(gcs_color_gold);
 					}
 				}
 				break;
@@ -1152,69 +1521,19 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if(HIWORD(W)==BN_CLICKED)
 					{
-						if (vglmode) {
+						if(!IsWindowEnabled(GetDlgItem(ghw_main, IDB_MAKE_SILV))) break;
 
-							using namespace silver; //use silver stats only
-							int ii;
-
-							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-							{
-								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-								}
-								else //stat is changed
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-								}
-
-							}
-
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-
-							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
-
+						aatf_ruleset::Ruleset rs;
+						if(aatf_ruleset::load_selected(rs))
+						{
+							set_make_values(rs, aatf_ruleset::CLASS_SILVER);
 							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
-
-							/*
-							_itow_s(silverRate_vgl, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverForm_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverIR_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
-							*/
-						}
-						else {
-							_itow_s(silverRate, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverForm, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverIR, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverWeakFootUse, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(silverWeakFootAcc, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 						}
 
+						//Auto-Color Names: apply the silver colour tag straight away
+						if(gb_autoColorNames)
+							SendMessage(ghw_main, WM_COMMAND, MAKEWPARAM(IDB_MAKE_SILV_COLOR, BN_CLICKED),
+								(LPARAM)GetDlgItem(ghw_main, IDB_MAKE_SILV_COLOR));
 					}
 				}
 				break;
@@ -1222,17 +1541,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if (HIWORD(W) == BN_CLICKED)
 					{
-						wchar_t oldName[0x1000];
-						wchar_t newName[0x1000];
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
-
-						newName[0] = 0;
-						wcscat(newName, L"cccccccff");
-
-						wcscat(newName, oldName);
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+						apply_name_color(gcs_color_silv);
 					}
 				}
 				break;
@@ -1240,17 +1549,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if (HIWORD(W) == BN_CLICKED)
 					{
-						wchar_t oldName[0x1000];
-						wchar_t newName[0x1000];
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_GETTEXT, (WPARAM)(sizeof(oldName) / sizeof(oldName[0])), (LPARAM)oldName);
-
-						newName[0] = 0;
-						wcscat(newName, L"c8b5f55ff");
-
-						wcscat(newName, oldName);
-
-						SendDlgItemMessage(ghw_main, IDT_PLAY_NAME, WM_SETTEXT, 0, (LPARAM)newName);
+						apply_name_color(gcs_color_bron);
 					}
 				}
 				break;
@@ -1258,202 +1557,36 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 				{
 					if (HIWORD(W) == BN_CLICKED)
 					{
+						if(!IsWindowEnabled(GetDlgItem(ghw_main, IDB_MAKE_BRON))) break;
 
-						if (vglmode) {
-							using namespace bronze; //use silver stats only
-							int ii;
-
-							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-							{
-								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-								}
-								else //stat is changed
-								{
-									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-								}
-
-							}
-
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-
-							//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
-
+						aatf_ruleset::Ruleset rs;
+						if(aatf_ruleset::load_selected(rs))
+						{
+							set_make_values(rs, aatf_ruleset::CLASS_BRONZE);
 							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
 						}
-						else {
-							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
-//	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
-
-							_itow_s(regRate, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regForm, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regIR, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFootUse, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFootAcc, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
-						}
+						//Auto-Color Names: apply the bronze colour tag straight away
+						if(gb_autoColorNames)
+							SendMessage(ghw_main, WM_COMMAND, MAKEWPARAM(IDB_MAKE_BRON_COLOR, BN_CLICKED),
+								(LPARAM)GetDlgItem(ghw_main, IDB_MAKE_BRON_COLOR));
 					}
 				}
 				break;
-//				case IDB_MAKE_BUFF:
-//				{
-//					if (HIWORD(W) == BN_CLICKED)
-//					{
-//
-//						if (vglmode) {
-//							using namespace buffed; //use silver stats only
-//							int ii;
-//
-//							for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-//							{
-//								if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-//								{
-//									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-//								}
-//								else //stat is changed
-//								{
-//									SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-//								}
-//
-//							}
-//
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-//
-//							SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
-//
-//							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
-//						}
-//						else {
-//							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
-////	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
-//
-//							_itow_s(regRate, buffer, 3, 10);
-//							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-//								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-//
-//							_itow_s(regForm, buffer, 3, 10);
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-//
-//							_itow_s(regIR, buffer, 3, 10);
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-//
-//							_itow_s(regWeakFootUse, buffer, 3, 10);
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-//
-//							_itow_s(regWeakFootAcc, buffer, 3, 10);
-//							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
-//						}
-//					}
-//				}
-//				break;
 				case IDB_MAKE_REGU:
 				{
 					if(HIWORD(W)==BN_CLICKED)
 					{
+						if(!IsWindowEnabled(GetDlgItem(ghw_main, IDB_MAKE_REGU))) break;
 
-						if (vglmode) {
-							if (gplayers[gn_playind[gn_listsel]].reg_pos != 0)
-							{
-								using namespace regular; //use regular stats only
-								int ii;
-
-								for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								{
-									if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-									{
-										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-									}
-									else //stat is changed
-									{
-										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-									}
-
-								}
-							
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-								//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
-							}
-							else
-							{
-								using namespace goalkeeper; //use goalkeeper stats only
-								int ii;
-
-								for (ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								{
-									if (stat_array[(ii - IDT_ABIL_ATKP) / 2] == 0) //stat is not changed from base stat value
-									{
-										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(base_stat).c_str());
-									}
-									else //stat is changed
-									{
-										SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)std::to_wstring(stat_array[(ii - IDT_ABIL_ATKP) / 2]).c_str());
-									}
-
-								}
-
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)std::to_wstring(injury_resistance).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_usage).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)std::to_wstring(weak_foot_accuracy).c_str());
-								SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)std::to_wstring(form).c_str());
-								//SendDlgItemMessage(ghw_main, IDT_PLAY_HGT, WM_SETTEXT, 0, (LPARAM)std::to_wstring(height).c_str());
-							}
-
+						aatf_ruleset::Ruleset rs;
+						if(aatf_ruleset::load_selected(rs))
+						{
+							//A goalkeeper uses the goalkeeper allowances
+							if(gn_listsel < 0 || gn_playind == NULL || gplayers == NULL) break;
+							int classId = (gplayers[gn_playind[gn_listsel]].reg_pos == 0)
+								? aatf_ruleset::CLASS_GOALKEEPER : aatf_ruleset::CLASS_REGULAR;
+							set_make_values(rs, classId);
 							Button_SetCheck(GetDlgItem(ghw_tab1, IDB_SKIL_LTHR), 0);
-
-							/*_itow_s(regRate_vgl, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regForm_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regIR_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFoot_vgl, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);*/
-						}
-						else {
-							//if(ii==IDT_ABIL_DEFP || ii==IDT_ABIL_BWIN || ii==IDT_ABIL_EXPL) //Nerf Defensive Prowess, Ball winning and Explosive power to 72
-//	SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)_T("77"));
-
-							_itow_s(regRate, buffer, 3, 10);
-							for (int ii = IDT_ABIL_ATKP; ii < gi_lastAbility; ii += 2)
-								SendDlgItemMessage(ghw_tab1, ii, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regForm, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_FORM, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regIR, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_INJU, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFootUse, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKUS, WM_SETTEXT, 0, (LPARAM)buffer);
-
-							_itow_s(regWeakFootAcc, buffer, 3, 10);
-							SendDlgItemMessage(ghw_tab1, IDT_ABIL_WKAC, WM_SETTEXT, 0, (LPARAM)buffer);
 						}
 					}
 				}
@@ -1478,12 +1611,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					{
 						update_tables();
 						ShowWindow(ghAatfbox, SW_SHOW);
-						if (vglmode) {
-							aatf_single_vgl(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, false);
-						}
-						else {
-							aatf_single(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players);
-						}
+						aatf_check_ruleset(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, false);
 						
 					}
 					else MessageBox(H,_T("Please select a team to check."),NULL,MB_ICONWARNING);
@@ -1495,12 +1623,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 					{
 						update_tables();
 						ShowWindow(ghAatfbox, SW_SHOW);
-						if (vglmode) {
-							aatf_single_vgl(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, true);
-						}
-						else {
-							aatf_single(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players);
-						}
+						aatf_check_ruleset(ghAatfbox, giPesVersion, gn_teamsel, gplayers, gteams, gnum_players, true);
 						
 					}
 					else MessageBox(H, _T("Please select a team to check."), NULL, MB_ICONWARNING);
@@ -1802,6 +1925,9 @@ void DoFileSave(HWND hwnd)
 
 	if(GetSaveFileName(&ofn))
 	{
+		//If the Auto Fix Database option is on, run Fix database before saving
+		if(gb_autoFixDb && gplayers) fix_database();
+
 		if( PathFileExists(cs_file_name) && gb_firstsave )
 		{
 			gb_firstsave = false;
@@ -9407,13 +9533,7 @@ BOOL CALLBACK aatf_mult_dlg_proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
     {
 		case WM_INITDIALOG:
 		{
-			if (vglmode) {
-				aatf_single_vgl(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players, false);
-			}
-			else {
-				aatf_single(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players);
-			}
-			
+			aatf_check_ruleset(hwnd, giPesVersion, (int)lParam, gplayers, gteams, gnum_players, false);
 			SetFocus(GetDlgItem(hwnd,IDB_AATFOK));
 		}
 		break;
@@ -9437,13 +9557,7 @@ BOOL CALLBACK aatf_mult_dlg_proc_sug(HWND hwnd, UINT Message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		if (vglmode) {
-			aatf_single_vgl(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players, true);
-		}
-		else {
-			aatf_single(hwnd, giPesVersion, lParam, gplayers, gteams, gnum_players);
-		}
-		
+		aatf_check_ruleset(hwnd, giPesVersion, (int)lParam, gplayers, gteams, gnum_players, true);
 		SetFocus(GetDlgItem(hwnd, IDB_AATFOK));
 	}
 	break;

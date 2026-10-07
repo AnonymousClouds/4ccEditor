@@ -1,3 +1,4 @@
+#pragma once
 //----------------------------------------------------------------------
 /*Header files and preprocessor directives*/
 
@@ -986,9 +987,8 @@ void extract_team_info21(team_entry, int&, void*);
 void extract_teamplayer_info20(team_entry, int &, void*);
 void extract_team_tactics20(team_entry, int &, void*);
 
-void aatf_single(HWND, int, int, player_entry*, team_entry*, int);
-void aatf_single_vgl(HWND, int, int, player_entry*, team_entry*, int, bool);
-bool aatf_check_player_in_pos(team_entry&, player_entry& player, int position, bool exclusive = false);
+void aatf_check_ruleset(HWND, int, int, player_entry*, team_entry*, int, bool);
+bool aatf_check_player_in_pos_first_preset(team_entry&, player_entry& player, int position, bool exclusive = false);
 wchar_t* aatf_get_position_name_from_byte(byte pos);
 
 void save_comparator(HWND, int, player_entry*, int, team_entry*, int, TCHAR*, void*);

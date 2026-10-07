@@ -44,6 +44,7 @@ BOOL CALLBACK bumpDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK copyDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK swapDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK bogloDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK settings_dlg_proc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK scale_children(HWND,LPARAM);
 BOOL CALLBACK draw_children(HWND,LPARAM);
 
@@ -51,9 +52,27 @@ BOOL CALLBACK draw_children(HWND,LPARAM);
 void setup_control(HWND,HFONT,SUBCLASSPROC);
 void setup_combo(HWND,HFONT,SUBCLASSPROC);
 
+//Settings (settings.cpp)
+bool load_settings();	//Reads 4cce_settings.cfg, returns true if the file was found
+void save_settings();	//Writes the current options to 4cce_settings.cfg
+void show_settings(HWND);	//Displays the Settings window
+void apply_autocolor_layout(bool);	//Shows/hides the Add Color buttons and resizes the Make ... buttons
+void update_make_buttons_enabled();	//Greys out Make ... for classes the selected ruleset does not allow
+void update_ruleset_menu();	//Bolds the "Load PES## Edit file" item for the ruleset's PES_VERSION
+void update_logo_bitmap();	//Picks the VGL or 4CC logo for the AATF ruleset's LEAGUE_TYPE
+void update_skill_card_labels();	//Marks the cards the selected ruleset makes free with a trailing '*'
+void make_work_path(TCHAR*, size_t, const TCHAR*);	//Resolves a file name against the startup directory
+
 //Global variables
 extern HINSTANCE ghinst;	//Main window instance
+extern HWND ghw_main;	//Main window
 extern HWND ghw_tabcon, ghw_tab1, ghw_tab2, ghw_tab3, ghw_tab4;
+extern HWND ghw_settings;	//Settings window
+extern bool gb_autoFixDb;	//Auto Fix Database option
+extern bool gb_autoColorNames;	//Auto-Color Names option
+extern bool gb_autoManlet;	//Auto-Manlet option
+extern TCHAR g_tc_work_dir[MAX_PATH];	//Directory the editor was started in; settings and rulesets live here
+extern TCHAR g_tc_ruleset_file[MAX_PATH];	//AATF ruleset .cfg selected in Settings
 extern HFONT ghFont;
 
 //Main window
