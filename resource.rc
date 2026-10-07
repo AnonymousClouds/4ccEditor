@@ -26,7 +26,17 @@ IDI_4CC                 ICON                    "4cc_sm.ico"
 // Bitmap
 //
 
-IDB_4CCLOGO             BITMAP                  "vgl_logo.bmp"
+IDB_4CCLOGO             BITMAP                  "4cc_logo.bmp"
+IDB_VGLLOGO             BITMAP                  "vgl_logo.bmp"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RCDATA
+//
+
+//Blank example ruleset written out by the New button in Settings
+IDR_BLANK_CFG           RCDATA                  "blank_config.cfg"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -56,6 +66,8 @@ BEGIN
 			MENUITEM "&Import 19 Texport file", ID_TEXP_OPEN_19_EN
 			MENUITEM "&Import 21 Texport file", ID_TEXP_OPEN_21_EN
 		END
+        MENUITEM SEPARATOR
+        MENUITEM "Se&ttings...",				ID_FILE_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "E&xit",						ID_FILE_EXIT
     END
@@ -137,13 +149,28 @@ BEGIN
         BEGIN
             MENUITEM "&Current Team",               IDM_DATA_AATFC
             MENUITEM "&Select Teams",               IDM_DATA_AATFS
-            MENUITEM "&Current Team (with suggestions)",               IDM_DATA_AATFC_SUG
+            MENUITEM "&Current Team (with suggestions)\tCtrl+T",       IDM_DATA_AATFC_SUG
             MENUITEM "&Select Teams (with suggestions)",               IDM_DATA_AATFS_SUG
             MENUITEM "Compare &EDITs",              IDM_DATA_COMPE
         END
         MENUITEM "&Output rosters to TSV",      IDM_DATA_OUTPUT
         MENUITEM "&Fix database",               IDM_DATA_FIX
     END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ACCELERATORS ACCELERATORS
+BEGIN
+    "B",            IDB_MAKE_BRON,      VIRTKEY, ALT
+    "G",            IDB_MAKE_GOLD,      VIRTKEY, ALT
+    "R",            IDB_MAKE_REGU,      VIRTKEY, ALT
+    "S",            IDB_MAKE_SILV,      VIRTKEY, ALT
+    "T",            IDM_DATA_AATFC_SUG, VIRTKEY, CONTROL
 END
 
 
@@ -225,6 +252,28 @@ BEGIN
 	AUTORADIOBUTTON		"Set like boot IDs", IDT_GLOVE_OPT2, 25, 100, 80, 10
 	AUTORADIOBUTTON		"Set all to the same ID:", IDT_GLOVE_OPT3, 25, 115, 80, 10
 	EDITTEXT			IDT_GLOVE_ID, 110, 114, 60, 12, WS_TABSTOP
+END
+
+IDD_SETTINGS DIALOG 0, 0, 170, 134
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Settings"
+FONT 9, "Segoe UI"
+BEGIN
+	AUTOCHECKBOX		"", IDC_SET_AUTOFIX, 10, 12, 10, 10, WS_TABSTOP
+	CONTROL			"Auto Fix Database", IDC_SET_AUTOFIX_TITLE, "Static", SS_LEFT | SS_NOTIFY | WS_GROUP, 24, 13, 136, 10
+
+	AUTOCHECKBOX		"", IDC_SET_AUTOCOLOR, 10, 32, 10, 10, WS_TABSTOP
+	CONTROL			"Auto-Color Names", IDC_SET_AUTOCOLOR_TITLE, "Static", SS_LEFT | SS_NOTIFY | WS_GROUP, 24, 33, 136, 10
+
+	AUTOCHECKBOX		"", IDC_SET_MANLET, 10, 52, 10, 10, WS_TABSTOP
+	CONTROL			"Auto-Manlet", IDC_SET_MANLET_TITLE, "Static", SS_LEFT | SS_NOTIFY | WS_GROUP, 24, 53, 136, 10
+
+	LTEXT			"AATF Ruleset (.cfg)", IDC_SET_RULESET_TITLE, 10, 74, 150, 10
+	COMBOBOX		IDC_SET_RULESET, 10, 85, 112, 40, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+	PUSHBUTTON		"New", IDC_SET_NEWRULESET, 126, 85, 34, 14, WS_TABSTOP
+
+	DEFPUSHBUTTON		"&Apply", IDC_SET_APPLY, 22, 112, 60, 14, WS_TABSTOP
+	PUSHBUTTON		"&Cancel", IDC_CANCEL, 88, 112, 60, 14, WS_TABSTOP
 END
 
 IDD_DATA_IMPORT DIALOG DISCARDABLE 0, 0, 160, 60

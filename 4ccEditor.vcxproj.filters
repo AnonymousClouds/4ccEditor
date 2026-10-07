@@ -48,7 +48,13 @@
     <ClCompile Include="window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="fpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ruleset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="menu_lists.cpp">
@@ -74,10 +80,7 @@
     <ClInclude Include="window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="aatf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="stats.h">
+    <ClInclude Include="ruleset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -94,6 +97,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="4cc_sm.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="4cc_logo.bmp">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="vgl_logo.bmp">

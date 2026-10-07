@@ -104,15 +104,16 @@
     <ClCompile Include="pes19.cpp" />
     <ClCompile Include="pes20.cpp" />
     <ClCompile Include="fpc.cpp" />
+    <ClCompile Include="ruleset.cpp" />
+    <ClCompile Include="settings.cpp" />
     <ClCompile Include="window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="aatf.h" />
     <ClInclude Include="crypt.h" />
     <ClInclude Include="editor.h" />
     <ClInclude Include="pstdint.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="stats.h" />
+    <ClInclude Include="ruleset.h" />
     <ClInclude Include="window.h" />
   </ItemGroup>
   <ItemGroup>
@@ -124,6 +125,7 @@
   <ItemGroup>
     <Image Include="4cc_med.ico" />
     <Image Include="4cc_sm.ico" />
+    <Image Include="4cc_logo.bmp" />
     <Image Include="vgl_logo.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

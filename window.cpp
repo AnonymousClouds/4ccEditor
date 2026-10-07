@@ -2,6 +2,7 @@
 #include "resource.h"
 #include "editor.h"
 #include "window.h"
+#include "ruleset.h"
 
 void setup_main(HWND H)
 {
@@ -274,9 +275,6 @@ void setup_main(HWND H)
 	hw_new = CreateWindowEx(NULL, _T("Static"), NULL, 
          SS_BITMAP | WS_CHILD | WS_VISIBLE, 
          310, 450, 180, 180, H, (HMENU)IDC_LOGO, GetModuleHandle(NULL), NULL);
-	HBITMAP hb_logo = (HBITMAP)LoadImage(ghinst, MAKEINTRESOURCE(IDB_4CCLOGO), IMAGE_BITMAP, 180, 180, LR_LOADTRANSPARENT);
-	//HBITMAP hb_logo = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_4CCLOGO));
-	SendMessage(hw_new, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hb_logo);
 	setup_control(hw_new, ghFont, scale_static_proc);
 
 	ghw_tabcon = CreateWindowEx(WS_EX_CONTROLPARENT, _T("SysTabControl32"), _T(""), 
@@ -296,6 +294,59 @@ void setup_main(HWND H)
 	TabCtrl_InsertItem(ghw_tabcon,3,&ti);
 
 	TabCtrl_SetCurSel(ghw_tabcon,0); //tab 1 visible by default
+}
+
+//----------------------------------------------------------------------
+//Show the VGL logo when the selected AATF ruleset says LEAGUE_TYPE=VGL,
+//  the 4CC logo otherwise (no ruleset counts as 4CC)
+void update_logo_bitmap()
+{
+	if(!IsWindow(ghw_main)) return;
+	HWND hw_logo = GetDlgItem(ghw_main, IDC_LOGO);
+	if(!hw_logo) return;
+
+	int n_bitmap = IDB_4CCLOGO;
+	aatf_ruleset::Ruleset rs;
+	if(aatf_ruleset::load_selected(rs) && rs.leagueType == _T("VGL"))
+		n_bitmap = IDB_VGLLOGO;
+
+	HBITMAP hb_logo = (HBITMAP)LoadImage(ghinst, MAKEINTRESOURCE(n_bitmap), IMAGE_BITMAP, 180, 180, LR_LOADTRANSPARENT);
+	if(!hb_logo) return;
+
+	HBITMAP hb_old = (HBITMAP)SendMessage(hw_logo, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hb_logo);
+	if(hb_old) DeleteObject(hb_old);
+}
+
+//----------------------------------------------------------------------
+//Show a trailing '*' on the skill cards the selected ruleset marks as free
+//  (AATF_SKILL_CARD_xx = 2); every other card keeps its plain name. The
+//  card checkboxes are numbered like the cards: IDB_SKIL_SCIS + card index
+void update_skill_card_labels()
+{
+	if(!IsWindow(ghw_tab1)) return;
+
+	aatf_ruleset::Ruleset rs;
+	bool b_loaded = aatf_ruleset::load_selected(rs);
+
+	for(int ii = 0; ii < 41; ii++)
+	{
+		HWND hw_card = GetDlgItem(ghw_tab1, IDB_SKIL_SCIS + ii);
+		if(!hw_card) continue;
+
+		TCHAR cs_name[64];
+		cs_name[0] = 0;
+		GetWindowText(hw_card, cs_name, 64);
+
+		//Drop the free marker from the label the card has right now
+		int n_len = (int)_tcslen(cs_name);
+		while(n_len > 0 && cs_name[n_len - 1] == _T('*')) cs_name[--n_len] = 0;
+
+		//Add it back when the ruleset makes the card free
+		if(b_loaded && rs.skillCard[ii] == 2)
+			_tcscat_s(cs_name, 64, _T("*"));
+
+		SetWindowText(hw_card, cs_name);
+	}
 }
 			
 			//Subclass controls inside basic dialog
