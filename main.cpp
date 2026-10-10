@@ -5,7 +5,6 @@
 #include "window.h"
 #include "ruleset.h"
 #include <string>
-#include <vector>
 #include <Windows.h>
 #pragma comment(lib, "Winmm.lib")
 #include <mmsystem.h>
