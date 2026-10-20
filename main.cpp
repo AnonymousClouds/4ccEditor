@@ -136,6 +136,7 @@ bool gb_updating_tactics = false; //To prevent the EN_CHANGE doing things when i
 bool gb_is_dragging = false;
 int gi_drag_x = -1, gi_drag_y = -1;
 bool gb_window_dragging = false;
+float gf_tact_scale = 1.0f;
 
 appearance_map g_umap_pid_to_startByte; //Map from player ID to start byte of appearance entry
 
@@ -429,7 +430,7 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			}
 		}
 		break;
-		case WM_MOVE:
+		case WM_MOVING:
 		{
 			gb_window_dragging = true; //Prevent constant rerendering of the tactics screen when moving the window
 		}
@@ -3646,6 +3647,8 @@ LRESULT CALLBACK scale_cntl_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			//pri->hdefer = DeferWindowPos(pri->hdefer, H, HWND_TOPMOST, X, Y, cx, cy, SWP_NOOWNERZORDER|SWP_NOACTIVATE|SWP_NOZORDER);
 
 			SendMessage(H, WM_SETFONT, (WPARAM)ghFont, MAKELPARAM(FALSE, 0));
+
+			gf_tact_scale = pri->scale;
 		}
 		break;
 
@@ -3715,7 +3718,8 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					else player_index = id - IDC_STATIC_PL1;
 
 					//If click is in bounds of the field, track where it started and who was clicked
-					if (pos.x >= 222 && pos.x <= 482 && pos.y >= 20 && pos.y <= 370)
+					if (pos.x >= ceil(222 * gf_tact_scale) && pos.x <= ceil(482 * gf_tact_scale)
+						&& pos.y >= ceil(20 * gf_tact_scale) && pos.y <= ceil(370 * gf_tact_scale))
 					{
 						if (gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[player_index].pos != 0x00)
 						{
@@ -3801,7 +3805,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				MapWindowPoints(NULL, ghw_tab4, &pos, 1);
 
 				int x_range = -1, y_range = -1;
-				double width = 260.0, height = 350.0;
+				double width = ceil(260.0 * gf_tact_scale), height = ceil(350.0 * gf_tact_scale);
 				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				{
 					x_range = 0x68;
@@ -3813,8 +3817,8 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				{
 					int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 					int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
-					int player_x = round((double)(pos.x - 222) / (width / x_range));
-					int player_y = y_range - round((double)(pos.y - 20) / (height / y_range)); //y-scale is inverted
+					int player_x = round((double)(pos.x - (222 * gf_tact_scale)) / (width / x_range));
+					int player_y = y_range - round((double)(pos.y - (20 * gf_tact_scale)) / (height / y_range)); //y-scale is inverted
 					
 					set_player_xy(gi_selected_player_field, player_id, -1, player_x, player_y, false, false);
 
@@ -3861,7 +3865,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				MapWindowPoints(NULL, ghw_tab4, &pos, 1);
 
 				int x_range = -1, y_range = -1;
-				double width = 260.0, height = 350.0;
+				double width = ceil(260.0 * gf_tact_scale), height = ceil(350.0 * gf_tact_scale);
 				if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 				{
 					x_range = 0x68;
@@ -3872,8 +3876,8 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				{
 					int teamOffset = (gteams[gn_teamsel].id * 100) + 1;
 					int player_id = teamOffset + gteams[gn_teamsel].starting11[gi_selected_player_field];
-					int player_x = round((double)(pos.x - 222) / (width / x_range));
-					int player_y = y_range - round((double)(pos.y - 20) / (height / y_range)); //y-scale is inverted
+					int player_x = round((double)(pos.x - (222 * gf_tact_scale)) / (width / x_range));
+					int player_y = y_range - round((double)(pos.y - (20 * gf_tact_scale)) / (height / y_range)); //y-scale is inverted
 
 					set_player_xy(gi_selected_player_field, player_id, -1, player_x, player_y, false, false);
 
@@ -3901,7 +3905,7 @@ LRESULT CALLBACK scale_static_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				gi_drag_y = -1;
 
 				//Redraw the region because the entire process of draging a player is a graphical mess
-				RECT rectFormation = create_rect(217, 5, 270, 370);
+				RECT rectFormation = create_rect(ceil(217 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(270 * gf_tact_scale), ceil(370 * gf_tact_scale));
 				RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 				gb_updating_tactics = false;
@@ -4545,7 +4549,8 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					{
 						if (!gb_window_dragging)
 						{
-							int width = 260, height = 350;
+							int width = ceil(gf_tact_scale * 260);
+							int height = ceil(gf_tact_scale * 350);
 
 							HDC hdc = lpdis->hDC;
 							HBRUSH brush;
@@ -4553,7 +4558,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 
 							for (int ii = 0; ii < 7; ii++)
 							{
-								RECT rectBg = create_rect(0, (ii * 50), width, 50);
+								RECT rectBg = create_rect(0, ceil(ii * 50 * gf_tact_scale), width, ceil(50 * gf_tact_scale));
 								brush = CreateSolidBrush(ii % 2 == 1 ? bg1 : bg2);
 								FillRect(hdc, &rectBg, brush);
 								DeleteObject(brush);
@@ -4568,8 +4573,8 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 							SelectObject(hdc, GetStockObject(NULL_BRUSH));
 							SelectObject(hdc, pen);
 							Ellipse(hdc, width / 2 - 35, height / 2 - 35, width / 2 + 35, height / 2 + 35);
-							Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), 50);
-							Rectangle(hdc, width / 4, 300, (width / 4) + (width / 2), 352);
+							Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), ceil(50 * gf_tact_scale));
+							Rectangle(hdc, width / 4, ceil(300 * gf_tact_scale), (width / 4) + (width / 2), height + 2);
 
 							DeleteObject(pen);
 							DeleteObject(hdc);
@@ -4580,7 +4585,8 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 					{
 						if (!gb_window_dragging)
 						{
-							int width = 173, height = 350;
+							int width = ceil(173 * gf_tact_scale);
+							int height = ceil(350 * gf_tact_scale);
 
 							HDC hdc = lpdis->hDC;
 							HBRUSH brush;
@@ -4674,7 +4680,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 										player_formation_data player = gteams[gn_teamsel].presets[gi_preset].formations[sel].players[ii];
 										set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
 									}
-									RECT rectFormation = create_rect(217, 5, 270, 370);
+									RECT rectFormation = create_rect(ceil(217 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(270 * gf_tact_scale), ceil(370 * gf_tact_scale));
 									RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 								}
 
@@ -5043,7 +5049,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, x, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].y);
 
 								//Redraw the region because the entire process of moving a player is a graphical mess
-								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RECT rectFormation = create_rect(ceil(217 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(270 * gf_tact_scale), ceil(370 * gf_tact_scale));
 								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 								gteams[gn_teamsel].b_changed = true;
@@ -5080,7 +5086,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								set_player_xy(gi_selected_player_field, current_index + teamOffset, current_pos, gteams[gn_teamsel].presets[gi_preset].formations[gi_formation].players[gi_selected_player_field].x, y);
 
 								//Redraw the region because the entire process of moving a player is a graphical mess
-								RECT rectFormation = create_rect(217, 5, 270, 370);
+								RECT rectFormation = create_rect(ceil(217 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(270 * gf_tact_scale), ceil(370 * gf_tact_scale));
 								RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
 								gteams[gn_teamsel].b_changed = true;
@@ -5447,7 +5453,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 									UpdateWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVDN));
 								}
 
-								RECT rectLineup = create_rect(497, 5, 380, 320);
+								RECT rectLineup = create_rect(ceil(497 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(380 * gf_tact_scale), ceil(320 * gf_tact_scale));
 								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE);
 							}
 							gb_updating_tactics = false;
@@ -5465,7 +5471,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								gi_selected_player_bench--;
 								update_backline(teamOffset);
 
-								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RECT rectLineup = create_rect(ceil(564 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(300 * gf_tact_scale), ceil(320 * gf_tact_scale));
 								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
 
 								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
@@ -5489,7 +5495,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 								gi_selected_player_bench++;
 								update_backline(teamOffset);
 
-								RECT rectLineup = create_rect(564, 5, 300, 320);
+								RECT rectLineup = create_rect(ceil(564 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(300 * gf_tact_scale), ceil(320 * gf_tact_scale));
 								RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
 
 								EnableWindow(GetDlgItem(ghw_tab4, IDB_TACT_BNMVUP), gi_selected_player_bench != 0);
@@ -8853,10 +8859,10 @@ void populate_tactics_tab(int teamOffset, int preset, int formation, bool rebuil
 		player_formation_data player = gteams[gn_teamsel].presets[preset].formations[formation].players[ii];
 		set_player_xy(ii, teamOffset + gteams[gn_teamsel].starting11[ii], player.pos, player.x, player.y);
 	}
-	RECT rectFormation = create_rect(217, 5, 270, 370);
+	RECT rectFormation = create_rect(ceil(217 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(270 * gf_tact_scale), ceil(370 * gf_tact_scale));
 	RedrawWindow(ghw_tab4, &rectFormation, NULL, RDW_FRAME | RDW_INVALIDATE);
 
-	RECT rectLineup = create_rect(497, 5, 383, 370);
+	RECT rectLineup = create_rect(ceil(497 * gf_tact_scale), ceil(5 * gf_tact_scale), ceil(383 * gf_tact_scale), ceil(370 * gf_tact_scale));
 	RedrawWindow(ghw_tab4, &rectLineup, NULL, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE);
 
 	gi_preset = preset;
@@ -8868,9 +8874,11 @@ void populate_tactics_tab(int teamOffset, int preset, int formation, bool rebuil
 //Pass in the raw byte values of X and Y, will automatically derive the correct positions for them based on the version
 void set_player_xy(int index, int player_id, byte pos, byte player_x, byte player_y, bool change_name, bool change_pos)
 {
-	int label_size_x = 60, label_size_y = 17, button_size_x = 52, button_size_y = 17;
+	int label_size_x = ceil(60 * gf_tact_scale), label_size_y = ceil(17 * gf_tact_scale);
+	int button_size_x = ceil(52 * gf_tact_scale), button_size_y = (17 * gf_tact_scale);
 	//Add 5 pixels of padding on all sides
-	int box_x = 217 + 5, box_y = 5 + 15, box_width = 260, box_height = 350;
+	int box_x = ceil(217 * gf_tact_scale) + 5, box_y = ceil(15 * gf_tact_scale) + 5;
+	int box_width = ceil(260 * gf_tact_scale), box_height = ceil(350 * gf_tact_scale);
 	if (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
 	{
 		//If gk force X and Y to 52 and 3 if they aren't for visual consistency, since the game will already do that upon match start
