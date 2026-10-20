@@ -6968,7 +6968,9 @@ void import_squad(HWND hwnd)
 				}
 			}
 
-			if (gb_importTact && (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21))
+			if (gb_importTact
+				&& (giPesVersion == 16 || giPesVersion == 17 || giPesVersion == 18 || giPesVersion == 19 || giPesVersion == 20 || giPesVersion == 21)
+				&& (pesVer == 16 || pesVer == 17 || pesVer == 18 || pesVer == 19 || pesVer == 20 || pesVer == 21))
 			{
 				int pos = num_on_team * sizeof(player_export) + (2 * gteams[0].team_max) + 5;
 				input_file.seekg(pos);
@@ -6984,6 +6986,10 @@ void import_squad(HWND hwnd)
 					}
 				}
 
+				init_tactics_tab();
+			}
+			else if (gb_tactics_enabled) //If importing a file from 15, don't update any of the tactical data but still reload so the names match
+			{
 				init_tactics_tab();
 			}
 
