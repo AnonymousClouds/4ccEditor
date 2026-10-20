@@ -131,10 +131,11 @@ int g_bumpAmount = 0;
 const uint8_t* gpMasterKey;
 int gi_preset, gi_formation, gi_selected_player_field = -1, gi_selected_player_bench = -1;
 bool gb_tactics_enabled = false;
-bool gb_updating_tactics = false; //To prevent the EN_CHANGE doing things when its triggered programattically
+bool gb_updating_tactics = false; //To prevent the EN_CHANGE doing things when its triggered programatically
 //MouseDrag stuff for the tactics tab
 bool gb_is_dragging = false;
 int gi_drag_x = -1, gi_drag_y = -1;
+bool gb_window_dragging = false;
 
 appearance_map g_umap_pid_to_startByte; //Map from player ID to start byte of appearance entry
 
@@ -426,6 +427,16 @@ LRESULT CALLBACK wnd_proc(HWND H, UINT M, WPARAM W, LPARAM L)
 			{
 				make_pony_phys();
 			}
+		}
+		break;
+		case WM_MOVE:
+		{
+			gb_window_dragging = true; //Prevent constant rerendering of the tactics screen when moving the window
+		}
+		break;
+		case WM_EXITSIZEMOVE:
+		{
+			gb_window_dragging = false; //Prevent constant rerendering of the tactics screen when moving the window
 		}
 		break;
 		case WM_NOTIFY:
@@ -4433,6 +4444,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			if (gb_is_dragging)
 			{
 				gb_is_dragging = false;
+				gb_window_dragging = false;
 				gi_drag_x = -1;
 				gi_drag_y = -1;
 
@@ -4449,6 +4461,7 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 			if (gb_is_dragging)
 			{
 				gb_is_dragging = false;
+				gb_window_dragging = false;
 				gi_drag_x = -1;
 				gi_drag_y = -1;
 
@@ -4530,49 +4543,55 @@ LRESULT CALLBACK tab_four_dlg_proc(HWND H, UINT M, WPARAM W, LPARAM L,
 				{
 					case IDB_TACT_BG:
 					{
-						int width = 260, height = 350;
-
-						HDC hdc = lpdis->hDC;
-						HBRUSH brush;
-						COLORREF bg1 = RGB(67, 102, 34), bg2 = RGB(77, 116, 44), lineColor = RGB(255, 255, 255);
-
-						for (int ii = 0; ii < 7; ii++)
+						if (!gb_window_dragging)
 						{
-							RECT rectBg = create_rect(0, (ii * 50), width, 50);
-							brush = CreateSolidBrush(ii % 2 == 1 ? bg1 : bg2);
-							FillRect(hdc, &rectBg, brush);
+							int width = 260, height = 350;
+
+							HDC hdc = lpdis->hDC;
+							HBRUSH brush;
+							COLORREF bg1 = RGB(67, 102, 34), bg2 = RGB(77, 116, 44), lineColor = RGB(255, 255, 255);
+
+							for (int ii = 0; ii < 7; ii++)
+							{
+								RECT rectBg = create_rect(0, (ii * 50), width, 50);
+								brush = CreateSolidBrush(ii % 2 == 1 ? bg1 : bg2);
+								FillRect(hdc, &rectBg, brush);
+								DeleteObject(brush);
+							}
+
+							RECT rectCenterLine = create_rect(0, (height / 2) - 1, width, 2);
+							brush = CreateSolidBrush(lineColor);
+							FillRect(hdc, &rectCenterLine, brush);
 							DeleteObject(brush);
+
+							HPEN pen = CreatePen(PS_SOLID, 2, lineColor);
+							SelectObject(hdc, GetStockObject(NULL_BRUSH));
+							SelectObject(hdc, pen);
+							Ellipse(hdc, width / 2 - 35, height / 2 - 35, width / 2 + 35, height / 2 + 35);
+							Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), 50);
+							Rectangle(hdc, width / 4, 300, (width / 4) + (width / 2), 352);
+
+							DeleteObject(pen);
+							DeleteObject(hdc);
 						}
-
-						RECT rectCenterLine = create_rect(0, (height / 2) - 1, width, 2);
-						brush = CreateSolidBrush(lineColor);
-						FillRect(hdc, &rectCenterLine, brush);
-						DeleteObject(brush);
-
-						HPEN pen = CreatePen(PS_SOLID, 2, lineColor);
-						SelectObject(hdc, GetStockObject(NULL_BRUSH));
-						SelectObject(hdc, pen);
-						Ellipse(hdc, width / 2 - 35, height / 2 - 35, width / 2 + 35, height / 2 + 35);
-						Rectangle(hdc, width / 4, -2, (width / 4) + (width / 2), 50);
-						Rectangle(hdc, width / 4, 300, (width / 4) + (width / 2), 352);
-
-						DeleteObject(pen);
-						DeleteObject(hdc);
 					}
 					break;
 					case IDB_TACT_BG2:
 					{
-						int width = 173, height = 350;
+						if (!gb_window_dragging)
+						{
+							int width = 173, height = 350;
 
-						HDC hdc = lpdis->hDC;
-						HBRUSH brush;
-						COLORREF bg = RGB(240, 240, 240);
+							HDC hdc = lpdis->hDC;
+							HBRUSH brush;
+							COLORREF bg = RGB(240, 240, 240);
 
-						RECT rectCenterLine = create_rect(0, 0, width, height);
-						brush = CreateSolidBrush(bg);
-						FillRect(hdc, &rectCenterLine, brush);
-						DeleteObject(brush);
-						DeleteObject(hdc);
+							RECT rectCenterLine = create_rect(0, 0, width, height);
+							brush = CreateSolidBrush(bg);
+							FillRect(hdc, &rectCenterLine, brush);
+							DeleteObject(brush);
+							DeleteObject(hdc);
+						}
 					}
 					break;
 
